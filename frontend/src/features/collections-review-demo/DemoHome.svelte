@@ -1,31 +1,29 @@
 <script>
   import { onMount, onDestroy } from 'svelte';
   import Nav from './Nav.svelte';
-  import { MOCK } from './mockData.js';
+  import Modal from './Modal.svelte';
+  import HelpModal from './HelpModal.svelte';
+  import { projectsStore, inProgressProjects, completedProjects, KNOWN_COLLECTIONS, addProject } from './mockStore.js';
 
   export let onNavigate = () => {};
   export let navVariant = 'glass';
 
   /* ── QuickReviewCard state ── */
   const SAMPLES = ['34412803', '29571100', '18204455', '42119007'];
-  const KNOWN = {
-    '34412803': { name: 'US · Top Online Local · 2024', sources: 318 },
-    '29571100': { name: 'Brazil · Top Online · 2025',   sources: 412 },
-    '18204455': { name: 'EU · Public Broadcasters',      sources: 198 },
-  };
 
   let qrId = '';
   let qrFocused = false;
   let qrAuto = '';
   let qrIdx = 0;
   let qrTimer = null;
+  let qrStarted = false; // shows "not found" feedback after pressing Start
 
-  $: qrInfo = KNOWN[qrId] || null;
+  $: qrInfo = KNOWN_COLLECTIONS[qrId] || null;
   $: qrResolved = !!qrInfo;
   $: qrNotFound = qrId.length === 8 && !qrInfo;
   $: qrShowAuto = !qrFocused && qrId === '';
   $: qrDisplay = qrShowAuto ? qrAuto : qrId;
-  $: qrBorderColor = qrResolved ? 'var(--v2-kept)' : qrNotFound ? 'var(--v2-red)' : 'var(--v2-line)';
+  $: qrBorderColor = qrResolved ? 'var(--v2-kept)' : (qrNotFound || (qrStarted && !qrResolved)) ? 'var(--v2-red)' : 'var(--v2-line)';
 
   function stepAuto() {
     if (qrFocused || qrId !== '') return;
@@ -42,25 +40,49 @@
     }
   }
 
-  function onQrFocus() {
-    qrFocused = true;
-    clearTimeout(qrTimer);
-  }
-
-  function onQrBlur() {
-    qrFocused = false;
-    qrTimer = setTimeout(stepAuto, 300);
-  }
-
+  function onQrFocus() { qrFocused = true; clearTimeout(qrTimer); }
+  function onQrBlur() { qrFocused = false; qrTimer = setTimeout(stepAuto, 300); }
   function onQrType(e) {
     qrId = e.target.value.replace(/[^0-9]/g, '').slice(0, 8);
+    qrStarted = false;
   }
 
-  onMount(() => {
-    qrTimer = setTimeout(stepAuto, 500);
-  });
+  function startReview() {
+    qrStarted = true;
+    if (qrResolved) onNavigate('/demo/reviews/124');
+  }
 
+  onMount(() => { qrTimer = setTimeout(stepAuto, 500); });
   onDestroy(() => clearTimeout(qrTimer));
+
+  /* ── Metadata toggle ── */
+  let metadataEditing = false;
+
+  /* ── Help modal ── */
+  let showHelp = false;
+
+  /* ── New project modal ── */
+  let showNewProject = false;
+  let newProjectName = '';
+  let newProjectSeeds = [];
+  const SEED_OPTIONS = [
+    'US Top Online (2024)', 'Maryland Local', 'Delaware Local', 'Virginia Local',
+    'DC Metro', 'Brazil Top Online (2025)', 'EU Public Broadcasters',
+    'LATAM Spanish-language', 'Africa Radio (2025)', 'AI Content Sweep List',
+  ];
+
+  function submitNewProject() {
+    if (!newProjectName.trim()) return;
+    addProject(newProjectName.trim(), newProjectSeeds);
+    showNewProject = false;
+    newProjectName = '';
+    newProjectSeeds = [];
+  }
+
+  /* ── See-all modals ── */
+  let showAllProjects   = false;
+  let showAllInProgress = false;
+  let showAllCompleted  = false;
 </script>
 
 <div class="home">
@@ -84,7 +106,7 @@
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
             Start a review
           </button>
-          <button class="btn btn-ghost btn-lg">How it works</button>
+          <button class="btn btn-ghost btn-lg" on:click={() => showHelp = true}>How it works</button>
         </div>
       </div>
 
@@ -131,8 +153,8 @@
                 Found
               </span>
             {/if}
-            {#if qrNotFound}
-              <span class="qrc-not-found">No match</span>
+            {#if qrNotFound || (qrStarted && !qrResolved && qrId.length > 0)}
+              <span class="qrc-not-found">Not found</span>
             {/if}
           </div>
 
@@ -164,25 +186,21 @@
           </div>
           <div class="qrc-option-box">
             <div class="qrc-option-label">Metadata editing</div>
-            <div class="qrc-option-val-row">
-              <span class="qrc-option-val">Off</span>
-              <div class="toggle toggle-off">
+            <button class="qrc-option-val-row" on:click={() => metadataEditing = !metadataEditing}>
+              <span class="qrc-option-val">{metadataEditing ? 'On' : 'Off'}</span>
+              <div class="toggle" class:toggle-on={metadataEditing} class:toggle-off={!metadataEditing}>
                 <div class="toggle-knob"></div>
               </div>
-            </div>
+            </button>
           </div>
         </div>
 
         <!-- Card footer -->
         <div class="qrc-footer">
           <span class="qrc-footer-hint">
-            {#if qrResolved}Queue starts with ~{qrInfo.sources} sources{/if}&nbsp;
+            {#if qrResolved}Queue starts with ~{qrInfo.sources} sources{:else if qrStarted && !qrResolved && qrId.length > 0}<span class="hint-err">Collection not found — try a different ID</span>{:else}&nbsp;{/if}
           </span>
-          <button
-            class="btn btn-primary"
-            class:btn-dim={!qrResolved}
-            on:click={() => qrResolved && onNavigate('/demo/review-projects/proj_8fa221')}
-          >
+          <button class="btn btn-primary" on:click={startReview}>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
             Start review
           </button>
@@ -203,11 +221,11 @@
       <h2 class="section-title">Review projects</h2>
     </div>
     <div class="section-header-actions">
-      <button class="btn btn-sm">
+      <button class="btn btn-sm" on:click={() => showAllProjects = true}>
         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M9 7h8v8"/></svg>
         See all
       </button>
-      <button class="btn" on:click={() => onNavigate('/demo/review-projects/proj_8fa221')}>
+      <button class="btn" on:click={() => showNewProject = true}>
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
         New project
       </button>
@@ -225,26 +243,26 @@
         <div></div>
       </div>
       <!-- Table rows -->
-      {#each MOCK.allProjects.slice(0, 10) as r}
+      {#each $projectsStore.slice(0, 10) as r}
         <button
           class="projects-row"
           on:click={() => onNavigate('/demo/review-projects/proj_8fa221')}
         >
-          <div class="project-avatar">{r.n[0]}</div>
+          <div class="project-avatar">{r.name[0]}</div>
           <div class="project-meta">
-            <div class="project-name">{r.n}</div>
-            <div class="project-seeds">{r.seeds} seed collections</div>
+            <div class="project-name">{r.name}</div>
+            <div class="project-seeds">{r.seeds} seed {r.seeds === 1 ? 'collection' : 'collections'}</div>
           </div>
-          <div class="project-queues">{r.queues} reviewer {r.queues === 1 ? 'queue' : 'queues'}</div>
+          <div class="project-queues">{r.queueCount} reviewer {r.queueCount === 1 ? 'queue' : 'queues'}</div>
           <div class="project-progress">
             <div class="progress-track">
               <div
                 class="progress-fill"
-                class:fill-done={r.p >= 1}
-                style:width="{r.p * 100}%"
+                class:fill-done={r.progress >= 1}
+                style:width="{r.progress * 100}%"
               ></div>
             </div>
-            <span class="progress-pct">{Math.round(r.p * 100)}%</span>
+            <span class="progress-pct">{Math.round(r.progress * 100)}%</span>
           </div>
           <div class="project-arrow">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M9 7h8v8"/></svg>
@@ -264,26 +282,26 @@
           <span class="section-num">/02</span>
           <span class="card-title">In-progress reviews</span>
         </div>
-        <button class="btn btn-sm">
+        <button class="btn btn-sm" on:click={() => showAllInProgress = true}>
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M9 7h8v8"/></svg>
           See all
         </button>
       </div>
-      {#each MOCK.inProgress.slice(0, 5) as r, i}
+      {#each $inProgressProjects.slice(0, 5) as r, i}
         <button
           class="review-row"
           class:first={i === 0}
           on:click={() => onNavigate('/demo/reviews/124')}
         >
           <div class="review-info">
-            <div class="review-name">{r.n}</div>
-            <div class="review-id">Collection {r.id}</div>
+            <div class="review-name">{r.name}</div>
+            <div class="review-id">{r.seeds} seed collections · {r.queueCount} {r.queueCount === 1 ? 'queue' : 'queues'}</div>
           </div>
           <div class="review-progress">
             <div class="progress-track">
-              <div class="progress-fill fill-ink" style:width="{r.p * 100}%"></div>
+              <div class="progress-fill fill-ink" style:width="{r.progress * 100}%"></div>
             </div>
-            <span class="progress-pct">{Math.round(r.p * 100)}%</span>
+            <span class="progress-pct">{Math.round(r.progress * 100)}%</span>
           </div>
           <div class="review-action">
             <button class="btn btn-sm" on:click|stopPropagation={() => onNavigate('/demo/reviews/124')}>
@@ -302,16 +320,16 @@
           <span class="section-num">/03</span>
           <span class="card-title">Completed reviews</span>
         </div>
-        <button class="btn btn-sm">
+        <button class="btn btn-sm" on:click={() => showAllCompleted = true}>
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M9 7h8v8"/></svg>
           See all
         </button>
       </div>
-      {#each MOCK.completed.slice(0, 5) as r, i}
+      {#each $completedProjects.slice(0, 5) as r, i}
         <div class="completed-row" class:first={i === 0}>
           <div class="review-info">
-            <div class="review-name">{r.n}</div>
-            <div class="review-id">{r.when}</div>
+            <div class="review-name">{r.name}</div>
+            <div class="review-id">{r.closedAt}</div>
           </div>
           <span class="chip chip-skipped">
             <span class="chip-dot chip-dot-skipped"></span>
@@ -323,6 +341,110 @@
 
   </div>
 </div>
+
+<!-- ─────────────── MODALS ─────────────── -->
+
+<HelpModal show={showHelp} role="admin" on:close={() => showHelp = false} />
+
+<!-- New project -->
+<Modal show={showNewProject} title="New review project" on:close={() => showNewProject = false}>
+  <form class="modal-form" on:submit|preventDefault={submitNewProject}>
+    <div class="form-field">
+      <label class="form-label" for="proj-name">Project name</label>
+      <input
+        id="proj-name"
+        class="form-input"
+        bind:value={newProjectName}
+        placeholder="e.g. Climate Reporting · EU"
+        required
+        autocomplete="off"
+      />
+    </div>
+    <div class="form-field">
+      <div class="form-label">Seed collections <span class="form-label-hint">(optional)</span></div>
+      <div class="seeds-grid">
+        {#each SEED_OPTIONS as seed}
+          <label class="seed-check">
+            <input type="checkbox" bind:group={newProjectSeeds} value={seed} />
+            {seed}
+          </label>
+        {/each}
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" type="button" on:click={() => showNewProject = false}>Cancel</button>
+      <button class="btn btn-primary" type="submit" disabled={!newProjectName.trim()}>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        Create project
+      </button>
+    </div>
+  </form>
+</Modal>
+
+<!-- All projects -->
+<Modal show={showAllProjects} title="All review projects" on:close={() => showAllProjects = false}>
+  <div class="modal-list">
+    {#each $projectsStore as r, i}
+      <button
+        class="modal-row"
+        class:first={i === 0}
+        on:click={() => { showAllProjects = false; onNavigate('/demo/review-projects/proj_8fa221'); }}
+      >
+        <div class="project-avatar sm">{r.name[0]}</div>
+        <div class="review-info">
+          <div class="review-name">{r.name}</div>
+          <div class="review-id">{r.seeds} seed {r.seeds === 1 ? 'collection' : 'collections'} · {r.queueCount} {r.queueCount === 1 ? 'queue' : 'queues'}</div>
+        </div>
+        <div class="modal-row-right">
+          {#if r.status === 'completed'}
+            <span class="chip chip-skipped"><span class="chip-dot chip-dot-skipped"></span>Closed</span>
+          {:else}
+            <span class="pct-badge">{Math.round(r.progress * 100)}%</span>
+          {/if}
+        </div>
+      </button>
+    {/each}
+  </div>
+</Modal>
+
+<!-- All in-progress -->
+<Modal show={showAllInProgress} title="In-progress reviews" on:close={() => showAllInProgress = false}>
+  <div class="modal-list">
+    {#each $inProgressProjects as r, i}
+      <button
+        class="modal-row"
+        class:first={i === 0}
+        on:click={() => { showAllInProgress = false; onNavigate('/demo/reviews/124'); }}
+      >
+        <div class="review-info">
+          <div class="review-name">{r.name}</div>
+          <div class="review-id">{r.seeds} seed collections · {r.queueCount} {r.queueCount === 1 ? 'queue' : 'queues'}</div>
+        </div>
+        <div class="review-progress modal-progress">
+          <div class="progress-track">
+            <div class="progress-fill fill-ink" style:width="{r.progress * 100}%"></div>
+          </div>
+          <span class="progress-pct">{Math.round(r.progress * 100)}%</span>
+        </div>
+      </button>
+    {/each}
+  </div>
+</Modal>
+
+<!-- All completed -->
+<Modal show={showAllCompleted} title="Completed reviews" on:close={() => showAllCompleted = false}>
+  <div class="modal-list">
+    {#each $completedProjects as r, i}
+      <div class="modal-row" class:first={i === 0}>
+        <div class="review-info">
+          <div class="review-name">{r.name}</div>
+          <div class="review-id">{r.closedAt}</div>
+        </div>
+        <span class="chip chip-skipped"><span class="chip-dot chip-dot-skipped"></span>Closed</span>
+      </div>
+    {/each}
+  </div>
+</Modal>
 
 <style>
   /* ── Page shell ── */
@@ -336,19 +458,14 @@
   }
 
   /* ── Hero ── */
-  .hero {
-    padding: 48px 72px 18px;
-  }
+  .hero { padding: 48px 72px 18px; }
   .hero-grid {
     display: grid;
     grid-template-columns: 1.05fr 1fr;
     gap: 36px;
     align-items: start;
   }
-  .hero-left {
-    display: flex;
-    flex-direction: column;
-  }
+  .hero-left { display: flex; flex-direction: column; }
   .hero-h1 {
     font-size: 60px;
     font-weight: 600;
@@ -365,54 +482,27 @@
     line-height: 1.6;
     margin: 22px 0 0;
   }
-  .hero-actions {
-    display: flex;
-    gap: 10px;
-    margin-top: 24px;
-    align-items: center;
-  }
+  .hero-actions { display: flex; gap: 10px; margin-top: 24px; align-items: center; }
 
   /* ── Buttons ── */
   .btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 10px 16px;
-    border-radius: 999px;
-    background: var(--v2-card);
-    color: var(--v2-ink);
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 10px 16px; border-radius: 999px;
+    background: var(--v2-card); color: var(--v2-ink);
     border: 1px solid var(--v2-line);
-    font-family: var(--v2-sans);
-    font-size: 13.5px;
-    font-weight: 500;
-    cursor: pointer;
-    white-space: nowrap;
+    font-family: var(--v2-sans); font-size: 13.5px; font-weight: 500;
+    cursor: pointer; white-space: nowrap;
     box-shadow: 0 1px 0 rgba(0,0,0,.02);
     transition: opacity .15s;
   }
   .btn-primary {
-    background: var(--v2-ink);
-    color: #fff;
-    border: none;
+    background: var(--v2-ink); color: #fff; border: none;
     box-shadow: 0 1px 0 rgba(0,0,0,.04), inset 0 1px 0 rgba(255,255,255,.18);
   }
-  .btn-ghost {
-    background: transparent;
-    border-color: transparent;
-    box-shadow: none;
-  }
-  .btn-lg {
-    padding: 12px 22px;
-    font-size: 15px;
-  }
-  .btn-sm {
-    padding: 7px 12px;
-    font-size: 12.5px;
-  }
-  .btn-dim {
-    opacity: .5;
-    pointer-events: none;
-  }
+  .btn-primary:disabled { opacity: .45; cursor: not-allowed; }
+  .btn-ghost { background: transparent; border-color: transparent; box-shadow: none; }
+  .btn-lg { padding: 12px 22px; font-size: 15px; }
+  .btn-sm { padding: 7px 12px; font-size: 12.5px; }
 
   /* ── QuickReviewCard ── */
   .qrc {
@@ -426,260 +516,111 @@
   .qrc-header {
     padding: 14px 20px;
     border-bottom: 1px solid var(--v2-line-soft);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
+    display: flex; align-items: center; justify-content: space-between;
   }
-  .qrc-header-left {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
+  .qrc-header-left { display: flex; align-items: center; gap: 10px; }
   .qrc-icon {
-    width: 26px;
-    height: 26px;
-    border-radius: 8px;
-    background: var(--v2-accent-soft);
-    color: var(--v2-accent);
-    display: grid;
-    place-items: center;
+    width: 26px; height: 26px; border-radius: 8px;
+    background: var(--v2-accent-soft); color: var(--v2-accent);
+    display: grid; place-items: center;
   }
-  .qrc-title {
-    font-size: 15px;
-    font-weight: 600;
-  }
-  .qrc-hint {
-    padding: 12px 22px 0;
-    font-size: 13px;
-    color: var(--v2-mute);
-    margin: 0;
-  }
-  .qrc-input-wrap {
-    padding: 14px 22px 8px;
-  }
+  .qrc-title { font-size: 15px; font-weight: 600; }
+  .qrc-hint { padding: 12px 22px 0; font-size: 13px; color: var(--v2-mute); margin: 0; }
+  .qrc-input-wrap { padding: 14px 22px 8px; }
   .qrc-input-label {
-    font-size: 13px;
-    color: var(--v2-mute);
-    letter-spacing: .5px;
-    text-transform: uppercase;
-    font-weight: 500;
-    margin-bottom: 6px;
+    font-size: 13px; color: var(--v2-mute); letter-spacing: .5px;
+    text-transform: uppercase; font-weight: 500; margin-bottom: 6px;
   }
   .qrc-input-row {
-    padding: 11px 14px;
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
+    padding: 11px 14px; border-radius: 12px;
+    display: flex; align-items: center; gap: 10px;
     border: 1.5px solid var(--v2-line);
     transition: border-color .25s ease;
   }
-  .qrc-input-inner {
-    position: relative;
-    flex: 1;
-    display: flex;
-    align-items: baseline;
-    min-width: 0;
-  }
+  .qrc-input-inner { position: relative; flex: 1; display: flex; align-items: baseline; min-width: 0; }
   .qrc-input {
-    flex: 1;
-    min-width: 0;
-    width: 100%;
-    border: none;
-    outline: none;
-    background: transparent;
-    padding: 0;
-    font-family: var(--v2-mono);
-    font-size: 22px;
-    font-weight: 500;
-    color: var(--v2-ink);
-    letter-spacing: -0.3px;
+    flex: 1; min-width: 0; width: 100%;
+    border: none; outline: none; background: transparent; padding: 0;
+    font-family: var(--v2-mono); font-size: 22px; font-weight: 500;
+    color: var(--v2-ink); letter-spacing: -0.3px;
   }
-  .qrc-input.auto {
-    color: var(--v2-mute);
-  }
+  .qrc-input.auto { color: var(--v2-mute); }
   .qrc-caret {
-    position: absolute;
-    top: 0.18em;
-    width: 2px;
-    height: 1.2em;
-    background: var(--v2-ink);
+    position: absolute; top: 0.18em;
+    width: 2px; height: 1.2em; background: var(--v2-ink);
     animation: blink 1s step-end infinite;
   }
   @keyframes blink { 50% { opacity: 0; } }
 
-  .qrc-found {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 14px;
-    color: var(--v2-kept);
-    font-weight: 600;
-    white-space: nowrap;
-  }
+  .qrc-found { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; color: var(--v2-kept); font-weight: 600; white-space: nowrap; }
   .qrc-found-dot {
-    width: 17px;
-    height: 17px;
-    border-radius: 50%;
-    background: var(--v2-kept);
-    color: #fff;
-    display: grid;
-    place-items: center;
-    flex-shrink: 0;
+    width: 17px; height: 17px; border-radius: 50%; background: var(--v2-kept); color: #fff;
+    display: grid; place-items: center; flex-shrink: 0;
   }
-  .qrc-not-found {
-    font-size: 14px;
-    color: var(--v2-red);
-    font-weight: 500;
-    white-space: nowrap;
-  }
+  .qrc-not-found { font-size: 14px; color: var(--v2-red); font-weight: 500; white-space: nowrap; }
 
-  /* Confirmation panel — animated height */
   .qrc-confirm {
-    overflow: hidden;
-    max-height: 0;
-    opacity: 0;
-    margin-top: 0;
+    overflow: hidden; max-height: 0; opacity: 0; margin-top: 0;
     transition: max-height .35s ease, opacity .35s ease, margin .35s ease;
   }
-  .qrc-confirm.visible {
-    max-height: 70px;
-    opacity: 1;
-    margin-top: 10px;
-  }
+  .qrc-confirm.visible { max-height: 70px; opacity: 1; margin-top: 10px; }
   .qrc-confirm-inner {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
+    display: flex; align-items: center; justify-content: space-between;
     padding: 11px 14px;
-    background: var(--v2-kept-soft);
-    border: 1px solid rgba(226,92,64,.2);
-    border-radius: 12px;
+    background: var(--v2-kept-soft); border: 1px solid rgba(226,92,64,.2); border-radius: 12px;
   }
-  .qrc-confirm-name {
-    font-size: 13.5px;
-    font-weight: 600;
-    color: var(--v2-ink);
-  }
-  .qrc-confirm-sub {
-    font-size: 13.5px;
-    color: var(--v2-accent-ink);
-    margin-top: 1px;
-  }
-  .qrc-confirm-count {
-    text-align: right;
-  }
-  .qrc-confirm-num {
-    font-size: 14px;
-    font-weight: 600;
-    font-family: var(--v2-mono);
-    letter-spacing: -0.5px;
-    color: var(--v2-ink);
-  }
-  .qrc-confirm-unit {
-    font-size: 12.5px;
-    color: var(--v2-mute);
-    text-transform: uppercase;
-    letter-spacing: .5px;
-    font-weight: 500;
-  }
+  .qrc-confirm-name { font-size: 13.5px; font-weight: 600; color: var(--v2-ink); }
+  .qrc-confirm-sub { font-size: 13.5px; color: var(--v2-accent-ink); margin-top: 1px; }
+  .qrc-confirm-count { text-align: right; }
+  .qrc-confirm-num { font-size: 14px; font-weight: 600; font-family: var(--v2-mono); letter-spacing: -0.5px; color: var(--v2-ink); }
+  .qrc-confirm-unit { font-size: 12.5px; color: var(--v2-mute); text-transform: uppercase; letter-spacing: .5px; font-weight: 500; }
 
-  /* Options row */
-  .qrc-options {
-    padding: 12px 22px 4px;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-  }
-  .qrc-option-box {
-    padding: 10px 12px;
-    border: 1px solid var(--v2-line);
-    border-radius: 12px;
-    background: #fff;
-  }
-  .qrc-option-label {
-    font-size: 14px;
-    color: var(--v2-mute);
-    letter-spacing: .5px;
-    text-transform: uppercase;
-    font-weight: 500;
-  }
+  .qrc-options { padding: 12px 22px 4px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .qrc-option-box { padding: 10px 12px; border: 1px solid var(--v2-line); border-radius: 12px; background: #fff; }
+  .qrc-option-label { font-size: 14px; color: var(--v2-mute); letter-spacing: .5px; text-transform: uppercase; font-weight: 500; }
   .qrc-option-val {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-top: 6px;
-    font-size: 13.5px;
-    font-weight: 500;
-    color: var(--v2-ink);
+    display: flex; align-items: center; justify-content: space-between;
+    margin-top: 6px; font-size: 13.5px; font-weight: 500; color: var(--v2-ink);
   }
   .qrc-option-val-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-top: 6px;
+    display: flex; align-items: center; justify-content: space-between;
+    margin-top: 6px; background: none; border: none; padding: 0; cursor: pointer; width: 100%;
+    font-family: var(--v2-sans); font-size: 13.5px; font-weight: 500; color: var(--v2-ink);
   }
 
   /* Toggle */
   .toggle {
-    width: 32px;
-    height: 18px;
-    border-radius: 999px;
-    position: relative;
-    flex-shrink: 0;
+    width: 32px; height: 18px; border-radius: 999px;
+    position: relative; flex-shrink: 0;
     border: 1px solid var(--v2-line);
+    transition: background .2s;
   }
   .toggle-off { background: var(--v2-neutral); }
+  .toggle-on  { background: var(--v2-accent); border-color: var(--v2-accent); }
   .toggle-knob {
-    position: absolute;
-    top: 1px;
-    left: 1px;
-    width: 14px;
-    height: 14px;
-    background: #fff;
-    border-radius: 50%;
-    box-shadow: 0 1px 2px rgba(0,0,0,.15);
+    position: absolute; top: 1px; left: 1px;
+    width: 14px; height: 14px; background: #fff;
+    border-radius: 50%; box-shadow: 0 1px 2px rgba(0,0,0,.15);
+    transition: left .2s;
   }
+  .toggle-on .toggle-knob { left: calc(100% - 15px); }
 
-  /* Card footer */
   .qrc-footer {
-    padding: 12px 22px 14px;
-    border-top: 1px solid var(--v2-line-soft);
-    margin-top: 12px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+    padding: 12px 22px 14px; border-top: 1px solid var(--v2-line-soft); margin-top: 12px;
+    display: flex; justify-content: space-between; align-items: center;
   }
-  .qrc-footer-hint {
-    font-size: 13px;
-    color: var(--v2-mute);
-  }
+  .qrc-footer-hint { font-size: 13px; color: var(--v2-mute); }
+  .hint-err { color: var(--v2-red); font-weight: 500; }
 
   /* ── Chips ── */
   .chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 3px 9px;
-    border-radius: 999px;
-    font-size: 13.5px;
-    font-weight: 500;
-    font-family: var(--v2-sans);
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 3px 9px; border-radius: 999px;
+    font-size: 13.5px; font-weight: 500; font-family: var(--v2-sans);
   }
-  .chip-neutral {
-    background: var(--v2-neutral);
-    color: var(--v2-body);
-  }
-  .chip-skipped {
-    background: var(--v2-skipped-soft);
-    color: var(--v2-body);
-  }
-  .chip-dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    flex-shrink: 0;
-  }
+  .chip-neutral { background: var(--v2-neutral); color: var(--v2-body); }
+  .chip-skipped { background: var(--v2-skipped-soft); color: var(--v2-body); }
+  .chip-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
   .chip-dot-skipped { background: var(--v2-skipped); }
 
   /* ── Section divider ── */
@@ -687,176 +628,67 @@
   .section-divider { height: 1px; background: var(--v2-line); }
 
   /* ── Section heading ── */
-  .section-header {
-    padding: 28px 72px 8px;
-    display: flex;
-    align-items: flex-end;
-    justify-content: space-between;
-  }
-  .section-header-left {
-    display: flex;
-    align-items: baseline;
-    gap: 14px;
-  }
-  .section-num {
-    font-size: 14px;
-    font-family: var(--v2-mono);
-    color: var(--v2-mute);
-    font-weight: 500;
-  }
-  .section-title {
-    margin: 0;
-    font-size: 26px;
-    font-weight: 600;
-    letter-spacing: -0.6px;
-    color: var(--v2-ink);
-  }
-  .section-header-actions {
-    display: flex;
-    gap: 8px;
-  }
+  .section-header { padding: 28px 72px 8px; display: flex; align-items: flex-end; justify-content: space-between; }
+  .section-header-left { display: flex; align-items: baseline; gap: 14px; }
+  .section-num { font-size: 14px; font-family: var(--v2-mono); color: var(--v2-mute); font-weight: 500; }
+  .section-title { margin: 0; font-size: 26px; font-weight: 600; letter-spacing: -0.6px; color: var(--v2-ink); }
+  .section-header-actions { display: flex; gap: 8px; }
 
   /* ── Card wrapper ── */
   .card-wrap { padding: 14px 72px 0; }
-  .card {
-    background: var(--v2-card);
-    border: 1px solid var(--v2-line);
-    border-radius: 16px;
-    overflow: hidden;
-  }
+  .card { background: var(--v2-card); border: 1px solid var(--v2-line); border-radius: 16px; overflow: hidden; }
 
   /* ── Projects table ── */
   .projects-thead {
-    display: grid;
-    grid-template-columns: 42px 1.6fr 1fr 1.1fr 30px;
-    font-size: 14.5px;
-    color: var(--v2-mute);
-    font-weight: 500;
-    letter-spacing: .5px;
-    text-transform: uppercase;
-    padding: 14px 22px 10px;
-    gap: 14px;
-    align-items: center;
+    display: grid; grid-template-columns: 42px 1.6fr 1fr 1.1fr 30px;
+    font-size: 14.5px; color: var(--v2-mute); font-weight: 500;
+    letter-spacing: .5px; text-transform: uppercase;
+    padding: 14px 22px 10px; gap: 14px; align-items: center;
   }
   .projects-row {
-    display: grid;
-    grid-template-columns: 42px 1.6fr 1fr 1.1fr 30px;
-    align-items: center;
-    padding: 14px 22px;
+    display: grid; grid-template-columns: 42px 1.6fr 1fr 1.1fr 30px;
+    align-items: center; padding: 14px 22px;
     border-top: 1px solid var(--v2-line-soft);
-    cursor: pointer;
-    gap: 14px;
-    background: transparent;
-    border-left: none;
-    border-right: none;
-    border-bottom: none;
-    width: 100%;
-    text-align: left;
-    font-family: var(--v2-sans);
-    color: var(--v2-ink);
+    cursor: pointer; gap: 14px;
+    background: transparent; border-left: none; border-right: none; border-bottom: none;
+    width: 100%; text-align: left; font-family: var(--v2-sans); color: var(--v2-ink);
     transition: background .12s;
   }
   .projects-row:hover { background: var(--v2-line-soft); }
 
   .project-avatar {
-    width: 32px;
-    height: 32px;
-    border-radius: 8px;
-    background: var(--v2-accent-soft);
-    color: var(--v2-accent);
-    display: grid;
-    place-items: center;
-    font-weight: 600;
-    font-size: 14.5px;
-    flex-shrink: 0;
+    width: 32px; height: 32px; border-radius: 8px;
+    background: var(--v2-accent-soft); color: var(--v2-accent);
+    display: grid; place-items: center;
+    font-weight: 600; font-size: 14.5px; flex-shrink: 0;
   }
+  .project-avatar.sm { width: 28px; height: 28px; font-size: 13px; flex-shrink: 0; }
   .project-meta { min-width: 0; }
-  .project-name {
-    font-size: 14.5px;
-    font-weight: 500;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .project-seeds {
-    font-size: 14px;
-    color: var(--v2-mute);
-    font-family: var(--v2-mono);
-    margin-top: 1px;
-  }
+  .project-name { font-size: 14.5px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .project-seeds { font-size: 14px; color: var(--v2-mute); font-family: var(--v2-mono); margin-top: 1px; }
   .project-queues { font-size: 14.5px; color: var(--v2-body); }
 
-  .project-progress {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-  .progress-track {
-    flex: 1;
-    height: 5px;
-    background: var(--v2-line-soft);
-    border-radius: 999px;
-    overflow: hidden;
-  }
-  .progress-fill {
-    height: 100%;
-    background: var(--v2-accent);
-    transition: width .3s;
-  }
+  .project-progress { display: flex; align-items: center; gap: 8px; }
+  .progress-track { flex: 1; height: 5px; background: var(--v2-line-soft); border-radius: 999px; overflow: hidden; }
+  .progress-fill { height: 100%; background: var(--v2-accent); transition: width .3s; }
   .progress-fill.fill-done { background: var(--v2-skipped); }
   .progress-fill.fill-ink  { background: var(--v2-ink); }
-  .progress-pct {
-    font-size: 14px;
-    color: var(--v2-body);
-    font-family: var(--v2-mono);
-    min-width: 36px;
-    text-align: right;
-  }
+  .progress-pct { font-size: 14px; color: var(--v2-body); font-family: var(--v2-mono); min-width: 36px; text-align: right; }
   .project-arrow { text-align: right; color: var(--v2-mute); }
 
   /* ── Lower section ── */
-  .lower-section {
-    padding: 44px 72px 0;
-    display: flex;
-    flex-direction: column;
-    gap: 44px;
-  }
+  .lower-section { padding: 44px 72px 0; display: flex; flex-direction: column; gap: 44px; }
 
-  .card-header {
-    padding: 14px 22px;
-    border-bottom: 1px solid var(--v2-line-soft);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
-  .card-header-left {
-    display: flex;
-    align-items: baseline;
-    gap: 14px;
-  }
-  .card-title {
-    font-size: 16px;
-    font-weight: 600;
-    color: var(--v2-ink);
-  }
+  .card-header { padding: 14px 22px; border-bottom: 1px solid var(--v2-line-soft); display: flex; align-items: center; justify-content: space-between; }
+  .card-header-left { display: flex; align-items: baseline; gap: 14px; }
+  .card-title { font-size: 16px; font-weight: 600; color: var(--v2-ink); }
 
-  /* In-progress rows */
   .review-row {
-    padding: 14px 22px;
-    display: grid;
-    grid-template-columns: 1.6fr 1fr 90px;
-    gap: 14px;
-    align-items: center;
-    border-top: 1px solid var(--v2-line-soft);
-    cursor: pointer;
-    background: transparent;
-    border-left: none;
-    border-right: none;
-    border-bottom: none;
-    width: 100%;
-    text-align: left;
-    font-family: var(--v2-sans);
-    color: var(--v2-ink);
+    padding: 14px 22px; display: grid; grid-template-columns: 1.6fr 1fr 90px; gap: 14px;
+    align-items: center; border-top: 1px solid var(--v2-line-soft);
+    cursor: pointer; background: transparent;
+    border-left: none; border-right: none; border-bottom: none;
+    width: 100%; text-align: left; font-family: var(--v2-sans); color: var(--v2-ink);
     transition: background .12s;
   }
   .review-row.first { border-top: none; }
@@ -864,26 +696,61 @@
 
   .review-info { min-width: 0; }
   .review-name { font-size: 14px; font-weight: 500; }
-  .review-id {
-    font-size: 14px;
-    color: var(--v2-mute);
-    font-family: var(--v2-mono);
-    margin-top: 1px;
-  }
-  .review-progress {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
+  .review-id { font-size: 14px; color: var(--v2-mute); font-family: var(--v2-mono); margin-top: 1px; }
+  .review-progress { display: flex; align-items: center; gap: 8px; }
   .review-action { text-align: right; }
 
-  /* Completed rows */
   .completed-row {
-    padding: 12px 22px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
+    padding: 12px 22px; display: flex; align-items: center; justify-content: space-between;
     border-top: 1px solid var(--v2-line-soft);
   }
   .completed-row.first { border-top: none; }
+
+  /* ── Modal content ── */
+  .modal-form { padding: 22px 24px 0; font-family: var(--v2-sans); }
+  .form-field { margin-bottom: 20px; }
+  .form-label { display: block; font-size: 13px; color: var(--v2-mute); text-transform: uppercase; letter-spacing: .5px; font-weight: 500; margin-bottom: 8px; }
+  .form-label-hint { text-transform: none; letter-spacing: 0; font-weight: 400; }
+  .form-input {
+    width: 100%; padding: 10px 14px; border-radius: 10px;
+    border: 1.5px solid var(--v2-line, #e8e9eb); background: #fff;
+    font-family: var(--v2-sans); font-size: 15px; color: var(--v2-ink);
+    outline: none; box-sizing: border-box;
+    transition: border-color .2s;
+  }
+  .form-input:focus { border-color: var(--v2-accent); }
+
+  .seeds-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .seed-check {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 10px; border-radius: 8px; border: 1px solid var(--v2-line, #e8e9eb);
+    font-size: 13.5px; color: var(--v2-body); cursor: pointer;
+    transition: background .12s;
+  }
+  .seed-check:hover { background: var(--v2-line-soft, #f5f5f7); }
+  .seed-check input[type="checkbox"] { accent-color: var(--v2-accent); flex-shrink: 0; }
+
+  .modal-footer {
+    display: flex; justify-content: flex-end; gap: 8px;
+    padding: 18px 0 24px;
+    border-top: 1px solid var(--v2-line-soft, #efefef);
+    margin-top: 4px;
+  }
+
+  .modal-list { padding-bottom: 8px; }
+  .modal-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 13px 24px; border-top: 1px solid var(--v2-line-soft, #f0f0f0);
+    cursor: pointer; background: transparent;
+    border-left: none; border-right: none; border-bottom: none;
+    width: 100%; text-align: left; font-family: var(--v2-sans); color: var(--v2-ink);
+    transition: background .12s;
+  }
+  .modal-row:is(div) { cursor: default; }
+  .modal-row.first { border-top: none; }
+  .modal-row:is(button):hover { background: #f8f8f8; }
+  .modal-row .review-info { flex: 1; min-width: 0; }
+  .modal-row-right { display: flex; align-items: center; }
+  .modal-progress { flex-shrink: 0; width: 140px; }
+  .pct-badge { font-size: 13.5px; font-family: var(--v2-mono); color: var(--v2-mute); }
 </style>

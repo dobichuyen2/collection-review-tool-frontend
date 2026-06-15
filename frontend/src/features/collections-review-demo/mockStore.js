@@ -87,6 +87,40 @@ export function saveSourceMeta(srcId, patch) {
   }));
 }
 
+// ── Projects store ────────────────────────────────────────────────────────────
+
+export const KNOWN_COLLECTIONS = {
+  '34412803': { name: 'US · Top Online Local · 2024', sources: 318 },
+  '29571100': { name: 'Brazil · Top Online · 2025',   sources: 412 },
+  '18204455': { name: 'EU · Public Broadcasters',      sources: 198 },
+  '42119007': { name: 'Africa · Radio · 2025',          sources: 247 },
+};
+
+const PROJECTS_INITIAL = [
+  { guid: 'proj_8fa221', name: 'Climate Reporting · US East Coast',  status: 'in_progress', seeds: 5, queueCount: 4, progress: 0.62, closedAt: null },
+  { guid: 'proj_b3c9d1', name: 'Spanish-language outlets · LATAM',   status: 'in_progress', seeds: 8, queueCount: 6, progress: 0.34, closedAt: null },
+  { guid: 'proj_a7f3e2', name: 'Top Online · Brazil 2025',           status: 'in_progress', seeds: 3, queueCount: 3, progress: 0.41, closedAt: null },
+  { guid: 'proj_d4c5b6', name: 'AI-generated content sweep',         status: 'in_progress', seeds: 2, queueCount: 2, progress: 0.18, closedAt: null },
+  { guid: 'proj_f1e2a3', name: 'Public broadcasters · EU',           status: 'completed',   seeds: 4, queueCount: 3, progress: 1,    closedAt: 'closed Apr 12' },
+  { guid: 'proj_c2d3e4', name: 'Top Online · Brazil 2024',           status: 'completed',   seeds: 2, queueCount: 2, progress: 1,    closedAt: 'closed Mar 03' },
+];
+
+export const projectsStore      = writable(PROJECTS_INITIAL);
+export const inProgressProjects = derived(projectsStore, $p => $p.filter(p => p.status === 'in_progress'));
+export const completedProjects  = derived(projectsStore, $p => $p.filter(p => p.status === 'completed'));
+
+export function addProject(name, seeds) {
+  projectsStore.update(ps => [{
+    guid:       `proj_${Date.now().toString(36)}`,
+    name,
+    status:     'in_progress',
+    seeds:      Math.max(seeds.length, 1),
+    queueCount: 1,
+    progress:   0,
+    closedAt:   null,
+  }, ...ps]);
+}
+
 // Trigger a mock CSV download in the browser.
 export function downloadCSV(type, state) {
   let headers, rows, filename;
