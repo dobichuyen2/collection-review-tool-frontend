@@ -1,6 +1,7 @@
 <script>
   import { onMount } from 'svelte';
   import Home from './routes/Home.svelte';
+  import DemoShell from './features/collections-review-demo/DemoShell.svelte';
   import RootStatic from './routes/RootStatic.svelte';
   import Review from './routes/Review.svelte';
   import ReviewProject from './routes/ReviewProject.svelte';
@@ -32,6 +33,8 @@ import ReviewProjectQueueLanding from './routes/ReviewProjectQueueLanding.svelte
 <main>
   {#if currentPath === '/'}
     <RootStatic />
+  {:else if currentPath.startsWith('/demo')}
+    <DemoShell />
   {:else if currentPath === '/manage' || currentPath === '/manage/'}
     <Home />
   {:else if currentPath.match(/^\/review-projects\/[0-9a-fA-F-]+\/skipped$/)}
