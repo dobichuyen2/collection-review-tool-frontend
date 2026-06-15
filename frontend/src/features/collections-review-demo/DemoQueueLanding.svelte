@@ -1,35 +1,36 @@
 <script>
   import Nav from './Nav.svelte';
   import DecisionBar from './DecisionBar.svelte';
-  import { MOCK } from './mockData.js';
+  import { PROJECTS } from './mockData.js';
   import { sessionCounts } from './mockStore.js';
 
   export let onNavigate = () => {};
   export let navVariant = 'glass';
 
-  const p = MOCK.project;
+  // URL: /demo/review-projects/{projectGuid}/queues/{queueGuid}
+  const parts = window.location.pathname.split('/');
+  const projectGuid = parts[3];
+  const queueGuid = parts[5];
 
-  // Resolve which queue to show from the URL (last path segment = guid).
-  const queueGuid = window.location.pathname.split('/').pop();
+  const p = PROJECTS[projectGuid] ?? PROJECTS['proj_8fa221'];
   const q = p.queues.find(qq => qq.guid === queueGuid) ?? p.queues[0];
 
-  // Only Queue 1 is the live review session; other queues show their own mock stats.
-  const isActiveQueue = q.guid === 'q1';
+  // Only proj_8fa221/q1 is the live review session; everything else shows static mock stats.
+  const isActiveQueue = projectGuid === 'proj_8fa221' && q.guid === 'q1';
 
-  // Unified display stats — reactive only when isActiveQueue (q1 follows sessionCounts).
   $: displayStats = isActiveQueue ? {
-    decided:  $sessionCounts.totalDecided,
-    kept:     $sessionCounts.totalKept,
-    removed:  $sessionCounts.totalRemoved,
-    added:    $sessionCounts.totalAdded,
-    skipped:  $sessionCounts.totalSkipped,
+    decided:   $sessionCounts.totalDecided,
+    kept:      $sessionCounts.totalKept,
+    removed:   $sessionCounts.totalRemoved,
+    added:     $sessionCounts.totalAdded,
+    skipped:   $sessionCounts.totalSkipped,
     undecided: $sessionCounts.totalUndecided,
   } : {
-    decided:  q.done,
-    kept:     q.kept,
-    removed:  q.removed,
-    added:    q.added,
-    skipped:  q.skipped,
+    decided:   q.done,
+    kept:      q.kept,
+    removed:   q.removed,
+    added:     q.added,
+    skipped:   q.skipped,
     undecided: q.undecided,
   };
 
@@ -57,10 +58,19 @@
     if (qq.done === 0) return 'Unassigned';
     return 'In progress';
   }
+
+  const projectTotal = p.totals.reviewed + p.totals.undecided;
 </script>
 
 <div class="landing">
-  <Nav role="queue" projectCtx="Climate · East Coast" {onNavigate} variant={navVariant} />
+  <Nav
+    role="queue"
+    projectCtx={p.name}
+    {projectGuid}
+    {queueGuid}
+    {onNavigate}
+    variant={navVariant}
+  />
 
   <!-- ── HERO ── -->
   <div class="hero">
@@ -68,7 +78,7 @@
     <h1 class="hero-h1">{q.id}</h1>
     <div class="chips-row">
       <span class="chip chip-neutral">{q.total} sources assigned</span>
-      <span class="chip chip-neutral">Project: Climate Reporting · US East Coast</span>
+      <span class="chip chip-neutral">Project: {p.name}</span>
     </div>
     <p class="about-tool">
       <span class="about-label">How reviewing works. </span>
@@ -129,7 +139,7 @@
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
           Open my queue
         </button>
-        <button class="btn btn-lg" on:click={() => onNavigate('/demo/reviews/124')}>
+        <button class="btn btn-lg" on:click={() => onNavigate(`/demo/review-projects/${projectGuid}/queues/${queueGuid}/decisions`)}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2 8l10 5 10-5z"/><path d="m2 14 10 5 10-5M2 11l10 5 10-5"/></svg>
           Review all decisions
         </button>
@@ -142,7 +152,9 @@
     <div class="card">
       <div class="status-header">
         <span class="card-title">Project status</span>
-        <span class="card-header-right">1,240 / 2,000 sources · 62%</span>
+        <span class="card-header-right">
+          {p.totals.reviewed.toLocaleString()} / {projectTotal.toLocaleString()} sources · {Math.round(p.progress * 100)}%
+        </span>
       </div>
       <div class="queues-grid" style:grid-template-columns="repeat({p.queues.length}, 1fr)">
         {#each p.queues as qq, i}

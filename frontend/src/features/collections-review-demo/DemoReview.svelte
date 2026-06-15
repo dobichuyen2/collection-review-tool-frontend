@@ -77,7 +77,7 @@
 <svelte:window on:keydown={onKey} />
 
 <div class="review-page">
-  <Nav role="queue" projectCtx="Climate · East Coast" {onNavigate} variant={navVariant} />
+  <Nav role="queue" projectCtx="Climate Reporting · US East Coast" projectGuid="proj_8fa221" queueGuid="q1" {onNavigate} variant={navVariant} />
 
   <!-- ── ALL-DONE STATE ─────────────────────────────────────────────────── -->
   {#if allDone}

@@ -65,6 +65,7 @@
   <Nav
     role="project"
     projectCtx={p ? p.name : 'Unknown project'}
+    {projectGuid}
     {onNavigate}
     variant={navVariant}
     onTab={(t) => { if (t === 'Settings' && p) showSettings = true; }}

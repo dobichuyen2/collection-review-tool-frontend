@@ -1,27 +1,49 @@
 <script>
   export let role = 'admin';
   export let projectCtx = null;
+  export let projectGuid = null;
+  export let queueGuid = null;
   export let onNavigate = () => {};
   export let variant = 'glass';
   export let onTab = () => {};
 
-  const TABS = {
-    admin:   [{ n: 'General Admin', to: '/demo/manage', active: true }, { n: 'All Projects' }],
-    project: [{ n: 'Project Admin', to: '/demo/review-projects/proj_8fa221', active: true }, { n: 'Settings' }, { n: 'All Decisions' }],
-    queue:   [{ n: 'My queue', to: '/demo/reviews/124', active: true }, { n: 'Decisions' }],
-  };
+  $: tabs = role === 'project' ? [
+    { n: 'Project Admin', to: `/demo/review-projects/${projectGuid}`, active: true },
+    { n: 'Settings' },
+    { n: 'All Decisions', to: `/demo/review-projects/${projectGuid}/decisions` },
+  ] : role === 'all-decisions' ? [
+    { n: 'Project Admin', to: `/demo/review-projects/${projectGuid}` },
+    { n: 'Settings' },
+    { n: 'All Decisions', to: `/demo/review-projects/${projectGuid}/decisions`, active: true },
+  ] : role === 'queue' ? [
+    { n: 'My queue', to: '/demo/reviews/124', active: true },
+    { n: 'Decisions', to: `/demo/review-projects/${projectGuid}/queues/${queueGuid}/decisions` },
+  ] : role === 'queue-decisions' ? [
+    { n: 'My queue', to: '/demo/reviews/124' },
+    { n: 'Decisions', to: `/demo/review-projects/${projectGuid}/queues/${queueGuid}/decisions`, active: true },
+  ] : role === 'all-projects' ? [
+    { n: 'General Admin', to: '/demo/manage' },
+    { n: 'All Projects', to: '/demo/projects', active: true },
+  ] : [
+    { n: 'General Admin', to: '/demo/manage', active: true },
+    { n: 'All Projects', to: '/demo/projects' },
+  ];
 
-  $: tabs = TABS[role] || TABS.admin;
   $: isGrey = variant === 'grey' || variant === 'print';
   $: isSticky = variant === 'glass';
+
+  function logoClick() {
+    if (role === 'queue' || role === 'queue-decisions') {
+      onNavigate(`/demo/review-projects/${projectGuid}/queues/${queueGuid}`);
+    } else {
+      onNavigate('/demo/manage');
+    }
+  }
 </script>
 
 <div class="nav-wrap" class:sticky={isSticky}>
   <div class="nav-bar" class:glass={!isGrey} class:grey={isGrey}>
-    <button
-      class="nav-logo"
-      on:click={() => onNavigate(role === 'queue' ? '/demo/review-projects/proj_8fa221/queues/q1' : '/demo/manage')}
-    >
+    <button class="nav-logo" on:click={logoClick}>
       <svg width="23" height="23" viewBox="0 0 32 32" fill="none">
         <rect x="4" y="6" width="24" height="20" rx="2.5" stroke="currentColor" stroke-width="2.4"/>
         <path d="M8 19c1.6 0 2-1.2 2.8-3.4C11.5 13.7 12 10 13.3 10c1.4 0 1.8 4 2.7 6 .7 1.6 1.3 2.2 2.2 1 .7-.9 1.2-2 2-2 .9 0 1.3 1 1.8 1.6.5.5 1 .8 2 .8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>

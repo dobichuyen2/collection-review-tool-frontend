@@ -7,6 +7,8 @@
   import DemoProject from './features/collections-review-demo/DemoProject.svelte';
   import DemoQueueLanding from './features/collections-review-demo/DemoQueueLanding.svelte';
   import DemoReview from './features/collections-review-demo/DemoReview.svelte';
+  import DemoAllProjects from './features/collections-review-demo/DemoAllProjects.svelte';
+  import DemoDecisions from './features/collections-review-demo/DemoDecisions.svelte';
   import RootStatic from './routes/RootStatic.svelte';
 
   const DEMO_ON = import.meta.env.VITE_DEMO_MODE !== 'false';
@@ -44,6 +46,12 @@ import ReviewProjectQueueLanding from './routes/ReviewProjectQueueLanding.svelte
     <DemoShell><DemoIndex onNavigate={navigate} /></DemoShell>
   {:else if currentPath === '/demo/manage' && DEMO_ON}
     <DemoShell><DemoHome onNavigate={navigate} navVariant="glass" /></DemoShell>
+  {:else if currentPath === '/demo/projects' && DEMO_ON}
+    <DemoShell><DemoAllProjects onNavigate={navigate} navVariant="glass" /></DemoShell>
+  {:else if currentPath.match(/^\/demo\/review-projects\/[^/]+\/decisions$/) && DEMO_ON}
+    <DemoShell><DemoDecisions onNavigate={navigate} navVariant="glass" /></DemoShell>
+  {:else if currentPath.match(/^\/demo\/review-projects\/[^/]+\/queues\/[^/]+\/decisions$/) && DEMO_ON}
+    <DemoShell><DemoDecisions onNavigate={navigate} navVariant="glass" /></DemoShell>
   {:else if currentPath.match(/^\/demo\/review-projects\/[^/]+$/) && DEMO_ON}
     <DemoShell><DemoProject onNavigate={navigate} navVariant="glass" /></DemoShell>
   {:else if currentPath.match(/^\/demo\/review-projects\/[^/]+\/queues\/[^/]+$/) && DEMO_ON}
