@@ -1,177 +1,349 @@
 <script>
   import Nav from './Nav.svelte';
-  import { MOCK } from './mockData.js';
+  import {
+    reviewState, sessionCounts, QUEUE_SOURCES,
+    decideSource, proposeSource, saveSourceMeta,
+  } from './mockStore.js';
 
   export let onNavigate = () => {};
   export let navVariant = 'glass';
 
-  const s = MOCK.source;
+  // ── Current source ────────────────────────────────────────────────────────
+  $: src = QUEUE_SOURCES[$reviewState.sourceIdx] ?? null;
+  $: allDone = src === null;
 
-  const META = [
-    { k: 'Language',    v: s.language, ok: true  },
-    { k: 'Pub country', v: s.country,  ok: true  },
-    { k: 'Pub state',   v: s.state,    ok: false },
-  ];
+  // Merge store meta-overrides onto the static source record.
+  $: meta = src ? [
+    { k: 'language', label: 'Language',    v: ($reviewState.metaOverrides[src.id]?.language ?? src.language) },
+    { k: 'country',  label: 'Pub country', v: ($reviewState.metaOverrides[src.id]?.country  ?? src.country)  },
+    { k: 'state',    label: 'Pub state',   v: ($reviewState.metaOverrides[src.id]?.state    ?? src.state)    },
+  ] : [];
 
-  const SIDEBAR_STATUS = [
-    { n: 84, l: 'kept',    color: '#E25C40' },
-    { n: 32, l: 'removed', color: '#1A1C1F' },
-    { n:  6, l: 'skipped', color: '#9CA0A8' },
-    { n:  2, l: 'added',   color: '#F5A48A' },
-  ];
+  // ── Metadata editing ──────────────────────────────────────────────────────
+  let editingField = null; // field key while editing
+  let editVal = '';
+
+  function startEdit(field) { editingField = field.k; editVal = field.v; }
+  function saveEdit() {
+    if (!src || !editingField) return;
+    saveSourceMeta(src.id, { [editingField]: editVal });
+    editingField = null;
+  }
+  function cancelEdit() { editingField = null; }
+
+  // Reset edit state + local-only "correct" confirmations when source changes.
+  let confirmedFields = {};
+  $: if ($reviewState.sourceIdx || $reviewState.sourceIdx === 0) {
+    editingField    = null;
+    confirmedFields = {};
+  }
+
+  function toggleConfirm(k) {
+    confirmedFields = { ...confirmedFields, [k]: !confirmedFields[k] };
+  }
+  $: isConfirmed = (k) => confirmedFields[k] ?? (k !== 'state'); // state starts unchecked
+
+  // ── Decisions ─────────────────────────────────────────────────────────────
+  function keep()   { decideSource('keep');   }
+  function remove() { decideSource('remove'); }
+  function skip()   { decideSource('skip');   }
+
+  // Keyboard shortcuts
+  function onKey(e) {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+    if (allDone) return;
+    if (e.key === 'k' || e.key === 'Enter') keep();
+    if (e.key === 'r') remove();
+    if (e.key === 's') skip();
+  }
+
+  // ── Propose-new-source modal ──────────────────────────────────────────────
+  let showPropose = false;
+  let proposeLabel = '';
+  let proposeUrl = '';
+  let proposeToast = '';
+
+  function submitPropose() {
+    if (!proposeLabel.trim() || !proposeUrl.trim()) return;
+    proposeSource(proposeLabel.trim(), proposeUrl.trim());
+    proposeLabel = '';
+    proposeUrl = '';
+    showPropose = false;
+    proposeToast = 'Source added — it appears in Added.';
+    setTimeout(() => proposeToast = '', 2500);
+  }
 </script>
+
+<svelte:window on:keydown={onKey} />
 
 <div class="review-page">
   <Nav role="queue" projectCtx="Climate · East Coast" {onNavigate} variant={navVariant} />
 
-  <!-- ── ACTION BAR ── -->
-  <div class="action-bar-wrap">
-    <div class="action-bar">
-      <button class="btn btn-sm" on:click={() => onNavigate('/demo/review-projects/proj_8fa221/queues/q1')}>
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="transform:rotate(180deg)"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-        Back to queue
-      </button>
-      <div class="action-divider"></div>
-      <button class="btn btn-sm">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="transform:rotate(180deg)"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-        Prev
-      </button>
-      <button class="btn btn-sm">
-        Next
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-      </button>
-      <div class="progress-pill">
-        <span class="progress-current">124</span>
-        <span class="progress-sep">/ 200</span>
-        <div class="progress-mini-track">
-          <div class="progress-mini-fill"></div>
+  <!-- ── ALL-DONE STATE ─────────────────────────────────────────────────── -->
+  {#if allDone}
+    <div class="done-wrap">
+      <div class="done-card">
+        <div class="done-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5 10 17.5l9-11"/></svg>
         </div>
-        <span class="progress-pct-sm">62%</span>
-      </div>
-      <div class="action-spacer"></div>
-      <button class="btn btn-sm">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2 8l10 5 10-5z"/><path d="m2 14 10 5 10-5M2 11l10 5 10-5"/></svg>
-        All decisions · 124
-      </button>
-      <button class="btn btn-primary btn-sm">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
-        Propose new source
-      </button>
-    </div>
-  </div>
-
-  <!-- ── TWO-COLUMN LAYOUT ── -->
-  <div class="main-grid">
-
-    <!-- Left: source card -->
-    <div class="card">
-      <!-- Source header -->
-      <div class="source-header">
-        <div class="chips-row">
-          <span class="chip chip-accent"><span class="chip-dot chip-dot-accent"></span>New source</span>
-          <span class="chip chip-neutral">Local · Daily</span>
-        </div>
-        <h1 class="source-title">{s.title}</h1>
-        <div class="source-links">
-          <a class="source-link" href="#demo">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>
-            {s.homepage}
-          </a>
-          <a class="source-link" href="#demo">
-            Review in Media Cloud
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M9 7h8v8"/></svg>
-          </a>
-        </div>
-      </div>
-
-      <!-- Metadata section -->
-      <div class="meta-heading-row">
-        <span class="meta-heading">Source metadata</span>
-        <span class="meta-hint">Confirm each field, or click Edit to fix.</span>
-      </div>
-      <div class="meta-grid">
-        {#each META as m, i}
-          <div class="meta-cell" class:has-right-border={i < 2}>
-            <div class="meta-label">{m.k}</div>
-            <div class="meta-value">{m.v}</div>
-            <div class="meta-actions">
-              <label class="correct-label" class:correct-yes={m.ok}>
-                <span class="checkbox" class:checked={m.ok}>
-                  {#if m.ok}
-                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5 10 17.5l9-11"/></svg>
-                  {/if}
-                </span>
-                Correct
-              </label>
-              <button class="btn btn-sm">Edit</button>
-            </div>
-          </div>
-        {/each}
-      </div>
-
-      <!-- Decision dock -->
-      <div class="decision-dock">
-        <span class="dock-label">Decide</span>
-        <button class="dock-btn dock-remove">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
-          Remove
-          <kbd class="kbd">R</kbd>
-        </button>
-        <button class="dock-btn dock-skip">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="m6 4 8 8-8 8M14 4v16"/></svg>
-          Skip for now
-          <kbd class="kbd">S</kbd>
-        </button>
-        <button class="dock-btn dock-keep">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5 10 17.5l9-11"/></svg>
-          Keep
-          <kbd class="kbd kbd-light">K · ↵</kbd>
-        </button>
-      </div>
-    </div>
-
-    <!-- Right: sidebar -->
-    <div class="sidebar">
-      <!-- Guidelines card -->
-      <div class="card">
-        <div class="sidebar-card-header">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="header-icon"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M8 13h8M8 17h6"/></svg>
-          <span class="sidebar-card-title">Guidelines</span>
-        </div>
-        <p class="guidelines-body">Set by your project lead. Open the side panel to read in full while you review.</p>
-        <div class="guidelines-list">
+        <h2 class="done-h2">Queue complete</h2>
+        <p class="done-sub">You've reviewed all {QUEUE_SOURCES.length} sources in this demo session.</p>
+        <div class="done-tally">
           {#each [
-            { b: 'Keep',   color: '#E25C40', t: 'sources that fit the project criteria' },
-            { b: 'Remove', color: '#1A1C1F', t: 'sources that do not' },
-            { b: 'Skip',   color: '#9CA0A8', t: 'unsure — leave a note for the lead' },
-          ] as g}
-            <div class="guideline-row">
-              <span class="guideline-verb" style:color={g.color}>{g.b}</span>
-              <span class="guideline-text">{g.t}</span>
+            { l: 'Kept',    n: $sessionCounts.totalKept,    c: '#E25C40' },
+            { l: 'Removed', n: $sessionCounts.totalRemoved, c: '#1A1C1F' },
+            { l: 'Skipped', n: $sessionCounts.totalSkipped, c: '#9CA0A8' },
+            { l: 'Added',   n: $sessionCounts.totalAdded,   c: '#F5A48A' },
+          ] as t}
+            <div class="done-stat">
+              <span class="done-dot" style:background={t.c}></span>
+              <span class="done-n" style:color={t.c}>{t.n}</span>
+              <span class="done-l">{t.l}</span>
             </div>
           {/each}
         </div>
-      </div>
-
-      <!-- Status card -->
-      <div class="card">
-        <div class="sidebar-card-header-plain">
-          <span class="sidebar-card-title">Status</span>
-        </div>
-        <div class="status-grid">
-          {#each SIDEBAR_STATUS as x}
-            <div class="status-cell">
-              <div class="status-label">
-                <span class="status-dot" style:background={x.color}></span>
-                {x.l}
-              </div>
-              <div class="status-val" style:color={x.color}>{x.n}</div>
-            </div>
-          {/each}
+        <div class="done-actions">
+          <button class="btn btn-primary" on:click={() => onNavigate('/demo/review-projects/proj_8fa221/queues/q1')}>
+            Back to your queue
+          </button>
+          <button class="btn" on:click={() => onNavigate('/demo/manage')}>
+            Return to Manage
+          </button>
         </div>
       </div>
     </div>
-  </div>
+
+  {:else}
+    <!-- ── ACTION BAR ──────────────────────────────────────────────────── -->
+    <div class="action-bar-wrap">
+      <div class="action-bar">
+        <button class="btn btn-sm" on:click={() => onNavigate('/demo/review-projects/proj_8fa221/queues/q1')}>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="transform:rotate(180deg)"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          Back to queue
+        </button>
+        <div class="action-divider"></div>
+        <button class="btn btn-sm" disabled>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="transform:rotate(180deg)"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          Prev
+        </button>
+        <button class="btn btn-sm" disabled>
+          Next
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </button>
+
+        <div class="progress-pill">
+          <span class="progress-current">{$sessionCounts.totalDecided}</span>
+          <span class="progress-sep">/ {$sessionCounts.queueTotal}</span>
+          <div class="progress-mini-track">
+            <div class="progress-mini-fill" style:width="{($sessionCounts.totalDecided / $sessionCounts.queueTotal) * 100}%"></div>
+          </div>
+          <span class="progress-pct-sm">{Math.round(($sessionCounts.totalDecided / $sessionCounts.queueTotal) * 100)}%</span>
+        </div>
+
+        <div class="action-spacer"></div>
+
+        <button class="btn btn-sm">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2 8l10 5 10-5z"/><path d="m2 14 10 5 10-5M2 11l10 5 10-5"/></svg>
+          All decisions · {$sessionCounts.totalDecided}
+        </button>
+        <button class="btn btn-primary btn-sm" on:click={() => showPropose = true}>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+          Propose new source
+        </button>
+      </div>
+    </div>
+
+    <!-- ── TWO-COLUMN LAYOUT ───────────────────────────────────────────── -->
+    <div class="main-grid">
+
+      <!-- Source card -->
+      <div class="card">
+        <!-- Source header -->
+        <div class="source-header">
+          <div class="chips-row">
+            {#if src.isNew}
+              <span class="chip chip-accent"><span class="chip-dot chip-dot-accent"></span>New source</span>
+            {:else}
+              <span class="chip chip-neutral"><span class="chip-dot chip-dot-mute"></span>Existing source</span>
+            {/if}
+            <span class="chip chip-neutral">{src.mediaType}</span>
+          </div>
+          <h1 class="source-title">{src.title}</h1>
+          <div class="source-links">
+            <span class="source-link-static">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>
+              {src.homepage}
+            </span>
+            <a class="source-link" href="https://{src.homepage}" target="_blank" rel="noreferrer">
+              Review in Media Cloud
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M9 7h8v8"/></svg>
+            </a>
+          </div>
+        </div>
+
+        <!-- Metadata section -->
+        <div class="meta-heading-row">
+          <span class="meta-heading">Source metadata</span>
+          <span class="meta-hint">Confirm each field, or click Edit to fix.</span>
+        </div>
+        <div class="meta-grid">
+          {#each meta as field, i}
+            <div class="meta-cell" class:has-right-border={i < 2}>
+              <div class="meta-label">{field.label}</div>
+
+              {#if editingField === field.k}
+                <input
+                  class="meta-edit-input"
+                  bind:value={editVal}
+                  on:keydown={e => e.key === 'Enter' && saveEdit()}
+                />
+                <div class="meta-edit-actions">
+                  <button class="btn btn-sm btn-accent" on:click={saveEdit}>Save</button>
+                  <button class="btn btn-sm" on:click={cancelEdit}>Cancel</button>
+                </div>
+              {:else}
+                <div class="meta-value">{field.v}</div>
+                <div class="meta-actions">
+                  <!-- Correct is local-only: no backend write path (see BACKEND-GAPS.md) -->
+                  <button
+                    class="correct-label"
+                    class:correct-yes={isConfirmed(field.k)}
+                    on:click={() => toggleConfirm(field.k)}
+                    title="Local-only toggle — no backend write path (BACKEND-GAPS.md)"
+                  >
+                    <span class="checkbox" class:checked={isConfirmed(field.k)}>
+                      {#if isConfirmed(field.k)}
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5 10 17.5l9-11"/></svg>
+                      {/if}
+                    </span>
+                    Correct
+                  </button>
+                  <button class="btn btn-sm" on:click={() => startEdit(field)}>Edit</button>
+                </div>
+              {/if}
+            </div>
+          {/each}
+        </div>
+        <div class="meta-local-note">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/></svg>
+          "Correct" is a session-only toggle — no backend write path exists yet (see BACKEND-GAPS.md). "Edit" writes to mock state.
+        </div>
+
+        <!-- Decision dock -->
+        <div class="decision-dock">
+          <span class="dock-label">Decide</span>
+          <button class="dock-btn dock-remove" on:click={remove}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+            Remove
+            <kbd class="kbd">R</kbd>
+          </button>
+          <button class="dock-btn dock-skip" on:click={skip}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="m6 4 8 8-8 8M14 4v16"/></svg>
+            Skip for now
+            <kbd class="kbd">S</kbd>
+          </button>
+          <button class="dock-btn dock-keep" on:click={keep}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5 10 17.5l9-11"/></svg>
+            Keep
+            <kbd class="kbd kbd-light">K · ↵</kbd>
+          </button>
+        </div>
+      </div>
+
+      <!-- Sidebar -->
+      <div class="sidebar">
+
+        <!-- Guidelines card -->
+        <div class="card">
+          <div class="sidebar-card-header">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="header-icon"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M8 13h8M8 17h6"/></svg>
+            <span class="sidebar-card-title">Guidelines</span>
+          </div>
+          <div class="guidelines-list">
+            {#each [
+              { b: 'Keep',   color: '#E25C40', t: 'sources that fit the project criteria' },
+              { b: 'Remove', color: '#1A1C1F', t: 'sources that do not' },
+              { b: 'Skip',   color: '#9CA0A8', t: 'unsure — leave a note for the lead' },
+            ] as g}
+              <div class="guideline-row">
+                <span class="guideline-verb" style:color={g.color}>{g.b}</span>
+                <span class="guideline-text">{g.t}</span>
+              </div>
+            {/each}
+          </div>
+        </div>
+
+        <!-- Status card -->
+        <div class="card">
+          <div class="sidebar-card-header-plain">
+            <span class="sidebar-card-title">Status</span>
+          </div>
+          <div class="status-grid">
+            {#each [
+              { l: 'kept',    n: $sessionCounts.totalKept,    color: '#E25C40' },
+              { l: 'removed', n: $sessionCounts.totalRemoved, color: '#1A1C1F' },
+              { l: 'skipped', n: $sessionCounts.totalSkipped, color: '#9CA0A8' },
+              { l: 'added',   n: $sessionCounts.totalAdded,   color: '#F5A48A' },
+            ] as x}
+              <div class="status-cell">
+                <div class="status-label">
+                  <span class="status-dot" style:background={x.color}></span>
+                  {x.l}
+                </div>
+                <div class="status-val" style:color={x.color}>{x.n}</div>
+              </div>
+            {/each}
+          </div>
+        </div>
+
+        <!-- Source position -->
+        <div class="position-note">
+          Source {$reviewState.sourceIdx + 1} of {QUEUE_SOURCES.length} in this demo session
+        </div>
+
+      </div>
+    </div>
+  {/if}
+
+  <!-- ── PROPOSE NEW SOURCE MODAL ──────────────────────────────────────── -->
+  {#if showPropose}
+    <div class="modal-overlay" on:click={() => showPropose = false} role="dialog" aria-modal="true">
+      <div class="modal" on:click|stopPropagation>
+        <div class="modal-header">
+          <div>
+            <div class="modal-title">Propose a new source</div>
+            <div class="modal-subtitle">The source will be added to the project's Added list for review.</div>
+          </div>
+          <button class="modal-close" on:click={() => showPropose = false}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="field-group">
+            <label class="field-label">Source name</label>
+            <input class="field-input" bind:value={proposeLabel} placeholder="e.g. Maryland Matters" />
+          </div>
+          <div class="field-group">
+            <label class="field-label">Website URL</label>
+            <input class="field-input" bind:value={proposeUrl} type="url" placeholder="e.g. marylandmatters.org" />
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn" on:click={() => showPropose = false}>Cancel</button>
+          <button
+            class="btn btn-primary"
+            class:btn-dim={!proposeLabel.trim() || !proposeUrl.trim()}
+            on:click={submitPropose}
+          >Add source</button>
+        </div>
+      </div>
+    </div>
+  {/if}
+
+  <!-- ── TOAST ──────────────────────────────────────────────────────────── -->
+  {#if proposeToast}
+    <div class="toast">{proposeToast}</div>
+  {/if}
 </div>
 
 <style>
@@ -184,13 +356,46 @@
     padding-bottom: 36px;
   }
 
+  /* ── All-done state ── */
+  .done-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 70vh;
+    padding: 40px;
+  }
+  .done-card {
+    text-align: center;
+    background: var(--v2-card);
+    border: 1px solid var(--v2-line);
+    border-radius: 20px;
+    padding: 44px 52px;
+    max-width: 480px;
+  }
+  .done-icon {
+    width: 48px; height: 48px; border-radius: 50%;
+    background: var(--v2-accent);
+    color: #fff;
+    display: grid; place-items: center;
+    margin: 0 auto 20px;
+  }
+  .done-h2 { font-size: 28px; font-weight: 600; letter-spacing: -0.7px; margin: 0 0 8px; }
+  .done-sub { font-size: 15px; color: var(--v2-body); margin: 0 0 28px; line-height: 1.5; }
+  .done-tally {
+    display: flex; gap: 16px; justify-content: center; flex-wrap: wrap;
+    margin-bottom: 28px;
+  }
+  .done-stat { display: flex; align-items: center; gap: 6px; font-size: 15px; }
+  .done-dot { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+  .done-n { font-weight: 600; font-family: var(--v2-mono); }
+  .done-l { color: var(--v2-body); }
+  .done-actions { display: flex; gap: 10px; justify-content: center; }
+
   /* ── Action bar ── */
   .action-bar-wrap { padding: 34px 40px 0; }
   .action-bar {
     padding: 10px 14px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
+    display: flex; align-items: center; gap: 10px;
     background: rgba(255,255,255,.84);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
@@ -198,31 +403,20 @@
     border-radius: 16px;
   }
   .action-divider { height: 18px; width: 1px; background: var(--v2-line); flex-shrink: 0; }
-  .action-spacer { flex: 1; }
+  .action-spacer  { flex: 1; }
 
   .progress-pill {
-    display: flex;
-    align-items: center;
-    gap: 10px;
+    display: flex; align-items: center; gap: 10px;
     padding: 5px 12px;
     background: var(--v2-surface);
     border: 1px solid var(--v2-line);
     border-radius: 8px;
-    font-size: 13.5px;
-    margin-left: 6px;
+    font-size: 13.5px; margin-left: 6px;
   }
   .progress-current { font-weight: 600; font-family: var(--v2-mono); }
-  .progress-sep { color: var(--v2-mute); }
-  .progress-mini-track {
-    width: 120px; height: 5px;
-    background: var(--v2-line-soft);
-    border-radius: 999px;
-    overflow: hidden;
-  }
-  .progress-mini-fill {
-    width: 62%; height: 100%;
-    background: var(--v2-accent);
-  }
+  .progress-sep     { color: var(--v2-mute); }
+  .progress-mini-track { width: 120px; height: 5px; background: var(--v2-line-soft); border-radius: 999px; overflow: hidden; }
+  .progress-mini-fill  { height: 100%; background: var(--v2-accent); transition: width .3s; }
   .progress-pct-sm { color: var(--v2-mute); font-family: var(--v2-mono); font-size: 14px; }
 
   /* ── Main grid ── */
@@ -234,13 +428,8 @@
     align-items: flex-start;
   }
 
-  /* ── Card ── */
-  .card {
-    background: var(--v2-card);
-    border: 1px solid var(--v2-line);
-    border-radius: 16px;
-    overflow: hidden;
-  }
+  /* ── Cards ── */
+  .card { background: var(--v2-card); border: 1px solid var(--v2-line); border-radius: 16px; overflow: hidden; }
 
   /* ── Buttons ── */
   .btn {
@@ -252,11 +441,11 @@
     cursor: pointer; white-space: nowrap;
     box-shadow: 0 1px 0 rgba(0,0,0,.02);
   }
-  .btn-primary {
-    background: var(--v2-ink); color: #fff; border: none;
-    box-shadow: 0 1px 0 rgba(0,0,0,.04), inset 0 1px 0 rgba(255,255,255,.18);
-  }
-  .btn-sm { padding: 7px 12px; font-size: 12.5px; }
+  .btn[disabled] { opacity: .4; pointer-events: none; }
+  .btn-primary { background: var(--v2-ink); color: #fff; border: none; box-shadow: 0 1px 0 rgba(0,0,0,.04), inset 0 1px 0 rgba(255,255,255,.18); }
+  .btn-accent  { background: var(--v2-accent); color: #fff; border: none; }
+  .btn-sm      { padding: 7px 12px; font-size: 12.5px; }
+  .btn-dim     { opacity: .5; pointer-events: none; }
 
   /* ── Source header ── */
   .source-header { padding: 24px 28px 8px; }
@@ -270,6 +459,7 @@
   .chip-neutral { background: var(--v2-neutral);     color: var(--v2-body);       }
   .chip-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
   .chip-dot-accent { background: var(--v2-accent); }
+  .chip-dot-mute   { background: var(--v2-mute); }
 
   .source-title {
     font-size: 44px; font-weight: 600;
@@ -277,12 +467,12 @@
     margin: 0; color: var(--v2-ink);
   }
   .source-links {
-    display: flex;
-    align-items: center;
-    gap: 22px;
-    margin-top: 12px;
-    font-size: 13.5px;
-    flex-wrap: wrap;
+    display: flex; align-items: center; gap: 22px;
+    margin-top: 12px; font-size: 13.5px; flex-wrap: wrap;
+  }
+  .source-link-static {
+    display: inline-flex; align-items: center; gap: 6px;
+    color: var(--v2-body);
   }
   .source-link {
     display: inline-flex; align-items: center; gap: 6px;
@@ -293,18 +483,14 @@
   /* ── Metadata ── */
   .meta-heading-row {
     border-top: 1px solid var(--v2-line-soft);
-    margin-top: 18px;
-    padding: 14px 28px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
+    margin-top: 18px; padding: 14px 28px;
+    display: flex; align-items: center; justify-content: space-between;
   }
   .meta-heading { font-size: 16px; font-weight: 600; }
-  .meta-hint { font-size: 13.5px; color: var(--v2-mute); }
+  .meta-hint    { font-size: 13.5px; color: var(--v2-mute); }
 
   .meta-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    display: grid; grid-template-columns: repeat(3, 1fr);
     border-top: 1px solid var(--v2-line-soft);
   }
   .meta-cell { padding: 18px 22px; }
@@ -316,34 +502,43 @@
   }
   .meta-value { font-size: 15px; font-weight: 600; letter-spacing: -0.4px; margin-top: 6px; }
   .meta-actions {
-    margin-top: 14px;
-    display: flex; align-items: center; justify-content: space-between;
+    margin-top: 14px; display: flex; align-items: center; justify-content: space-between;
   }
+  .meta-edit-input {
+    width: 100%; margin-top: 6px; padding: 7px 10px;
+    border: 1.5px solid var(--v2-accent);
+    border-radius: 8px; font-size: 15px; font-weight: 500;
+    font-family: var(--v2-sans); outline: none;
+    background: #fff; color: var(--v2-ink);
+  }
+  .meta-edit-actions { display: flex; gap: 6px; margin-top: 10px; }
 
   .correct-label {
     display: inline-flex; align-items: center; gap: 7px;
     font-size: 14px; color: var(--v2-body); cursor: pointer;
+    background: none; border: none; padding: 0; font-family: var(--v2-sans);
   }
   .correct-label.correct-yes { color: var(--v2-accent-ink); }
-
   .checkbox {
     width: 15px; height: 15px; border-radius: 4px;
-    background: #fff;
-    border: 1.5px solid var(--v2-line);
+    background: #fff; border: 1.5px solid var(--v2-line);
     display: grid; place-items: center; flex-shrink: 0;
   }
-  .checkbox.checked {
-    background: var(--v2-accent);
-    border-color: var(--v2-accent);
+  .checkbox.checked { background: var(--v2-accent); border-color: var(--v2-accent); }
+
+  .meta-local-note {
+    padding: 8px 28px 14px;
+    font-size: 12.5px; color: var(--v2-mute);
+    display: flex; align-items: flex-start; gap: 6px;
+    border-top: 1px solid var(--v2-line-soft);
+    line-height: 1.5;
   }
+  .meta-local-note svg { flex-shrink: 0; margin-top: 1px; }
 
   /* ── Decision dock ── */
   .decision-dock {
     padding: 16px 22px;
-    border-top: 1px solid var(--v2-line-soft);
-    display: flex;
-    align-items: center;
-    gap: 10px;
+    display: flex; align-items: center; gap: 10px;
   }
   .dock-label {
     font-size: 14px; color: var(--v2-mute);
@@ -354,64 +549,45 @@
     flex: 1; display: flex; align-items: center; justify-content: center;
     gap: 10px; padding: 13px 14px; border-radius: 12px;
     font-family: var(--v2-sans); font-size: 14px; font-weight: 500; cursor: pointer;
+    transition: opacity .12s;
   }
-  .dock-remove {
-    background: #fff; border: 1px solid var(--v2-removed-soft);
-    color: var(--v2-removed);
-  }
-  .dock-skip {
-    background: #fff; border: 1px solid var(--v2-skipped-soft);
-    color: var(--v2-skipped);
-  }
-  .dock-keep {
+  .dock-btn:hover  { opacity: .85; }
+  .dock-btn:active { opacity: .7; transform: scale(.98); }
+  .dock-remove { background: #fff; border: 1px solid var(--v2-removed-soft); color: var(--v2-removed); }
+  .dock-skip   { background: #fff; border: 1px solid var(--v2-skipped-soft); color: var(--v2-skipped); }
+  .dock-keep   {
     flex: 1.4;
-    background: var(--v2-kept); border: none; color: #fff;
-    font-weight: 600;
+    background: var(--v2-kept); border: none; color: #fff; font-weight: 600;
     box-shadow: 0 2px 0 rgba(0,0,0,.06), inset 0 1px 0 rgba(255,255,255,.18);
   }
-  .kbd {
-    padding: 1.5px 6px;
-    background: rgba(0,0,0,.07);
-    border-radius: 4px; font-size: 12.5px;
-    font-family: var(--v2-mono); font-weight: 500; color: inherit;
-  }
+  .kbd       { padding: 1.5px 6px; background: rgba(0,0,0,.07); border-radius: 4px; font-size: 12.5px; font-family: var(--v2-mono); font-weight: 500; color: inherit; }
   .kbd-light { background: rgba(255,255,255,.22); color: #fff; }
 
   /* ── Sidebar ── */
   .sidebar { display: flex; flex-direction: column; gap: 16px; }
 
   .sidebar-card-header {
-    padding: 12px 18px;
-    border-bottom: 1px solid var(--v2-line-soft);
+    padding: 12px 18px; border-bottom: 1px solid var(--v2-line-soft);
     display: flex; align-items: center; gap: 8px;
   }
   .sidebar-card-header-plain {
-    padding: 12px 18px;
-    border-bottom: 1px solid var(--v2-line-soft);
+    padding: 12px 18px; border-bottom: 1px solid var(--v2-line-soft);
   }
   .sidebar-card-title { font-size: 15.5px; font-weight: 600; }
   .header-icon { color: var(--v2-accent); }
 
-  .guidelines-body {
-    padding: 12px 18px;
-    font-size: 14px; color: var(--v2-body); line-height: 1.5; margin: 0;
-  }
-  .guidelines-list { padding: 0 18px 14px; display: flex; flex-direction: column; gap: 6px; }
+  .guidelines-list { padding: 10px 18px 14px; display: flex; flex-direction: column; gap: 6px; }
   .guideline-row { display: flex; gap: 10px; font-size: 14px; align-items: baseline; }
   .guideline-verb { font-weight: 600; min-width: 50px; }
   .guideline-text { color: var(--v2-body); }
 
   .status-grid {
-    padding: 14px 18px;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
+    padding: 14px 18px; display: grid;
+    grid-template-columns: 1fr 1fr; gap: 10px;
   }
   .status-cell {
-    padding: 10px 12px;
-    background: var(--v2-surface);
-    border-radius: 10px;
-    border: 1px solid var(--v2-line-soft);
+    padding: 10px 12px; background: var(--v2-surface);
+    border-radius: 10px; border: 1px solid var(--v2-line-soft);
   }
   .status-label {
     display: inline-flex; align-items: center; gap: 6px;
@@ -422,5 +598,68 @@
   .status-val {
     font-size: 15px; font-weight: 600;
     letter-spacing: -0.5px; font-family: var(--v2-mono); margin-top: 4px;
+    transition: color .2s;
   }
+
+  .position-note {
+    font-size: 13px; color: var(--v2-mute);
+    text-align: center; font-family: var(--v2-mono);
+    padding: 0 4px;
+  }
+
+  /* ── Propose-new-source modal ── */
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(20,23,30,.38);
+    backdrop-filter: blur(4px);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 100;
+  }
+  .modal {
+    background: var(--v2-card);
+    border: 1px solid var(--v2-line);
+    border-radius: 20px;
+    width: 480px; max-width: 96vw;
+    box-shadow: 0 24px 60px -20px rgba(0,0,0,.28);
+    overflow: hidden;
+  }
+  .modal-header {
+    padding: 20px 22px;
+    border-bottom: 1px solid var(--v2-line-soft);
+    display: flex; align-items: flex-start; justify-content: space-between; gap: 14px;
+  }
+  .modal-title    { font-size: 16px; font-weight: 600; }
+  .modal-subtitle { font-size: 13.5px; color: var(--v2-mute); margin-top: 4px; }
+  .modal-close {
+    background: none; border: none; cursor: pointer;
+    color: var(--v2-mute); padding: 4px; border-radius: 6px; flex-shrink: 0;
+  }
+  .modal-body   { padding: 18px 22px; display: flex; flex-direction: column; gap: 16px; }
+  .modal-footer {
+    padding: 14px 22px; border-top: 1px solid var(--v2-line-soft);
+    display: flex; align-items: center; justify-content: flex-end; gap: 10px;
+  }
+
+  .field-group  { display: flex; flex-direction: column; gap: 6px; }
+  .field-label  { font-size: 14px; font-weight: 500; color: var(--v2-body); }
+  .field-input  {
+    padding: 10px 14px; border-radius: 10px;
+    border: 1.5px solid var(--v2-line);
+    font-size: 15px; font-family: var(--v2-sans);
+    color: var(--v2-ink); outline: none;
+    background: var(--v2-surface);
+  }
+  .field-input:focus { border-color: var(--v2-accent); }
+
+  /* ── Toast ── */
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    padding: 10px 20px; border-radius: 999px;
+    background: var(--v2-ink); color: #fff;
+    font-size: 14px; font-weight: 500; font-family: var(--v2-sans);
+    box-shadow: 0 8px 24px -8px rgba(0,0,0,.28);
+    z-index: 200;
+    animation: fadeIn .2s ease;
+  }
+  @keyframes fadeIn { from { opacity: 0; transform: translateX(-50%) translateY(8px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
 </style>

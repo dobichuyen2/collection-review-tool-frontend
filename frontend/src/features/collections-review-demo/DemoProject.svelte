@@ -1,7 +1,9 @@
 <script>
+  import { get } from 'svelte/store';
   import Nav from './Nav.svelte';
   import DecisionBar from './DecisionBar.svelte';
   import { MOCK } from './mockData.js';
+  import { reviewState, sessionCounts, saveGuidelines, downloadCSV } from './mockStore.js';
 
   export let onNavigate = () => {};
   export let navVariant = 'glass';
@@ -29,6 +31,31 @@
     return { reviewed: q.done, kept: q.kept, removed: q.removed, added: q.added, skipped: q.skipped, undecided: q.undecided };
   }
   function queuePct(q) { return q.total > 0 ? q.done / q.total : 0; }
+
+  // ── Copy reviewer link ────────────────────────────────────────────────────
+  let copiedIdx = null;
+  function copyLink(url, idx) {
+    navigator.clipboard.writeText(url);
+    copiedIdx = idx;
+    setTimeout(() => copiedIdx = null, 2000);
+  }
+
+  // ── Export CSV ────────────────────────────────────────────────────────────
+  let csvToast = '';
+  function exportCSV(type) {
+    downloadCSV(type, get(reviewState));
+    csvToast = type === 'audit' ? 'Audit CSV downloaded' : 'Project CSV downloaded';
+    setTimeout(() => csvToast = '', 2000);
+  }
+
+  // ── Guidelines (Settings modal) ──────────────────────────────────────────
+  let localGuidelines = get(reviewState).guidelines;
+  let guidelinesSaved = false;
+  function handleSaveSettings() {
+    saveGuidelines(localGuidelines);
+    guidelinesSaved = true;
+    setTimeout(() => { guidelinesSaved = false; showSettings = false; }, 1200);
+  }
 </script>
 
 <div class="project-page">
@@ -61,9 +88,13 @@
         </p>
       </div>
       <div class="hero-actions">
-        <button class="btn">
+        <button class="btn" on:click={() => exportCSV('project')}>
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7M16 6l-4-4-4 4M12 2v14"/></svg>
-          Export CSV
+          Project CSV
+        </button>
+        <button class="btn" on:click={() => exportCSV('audit')}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7M16 6l-4-4-4 4M12 2v14"/></svg>
+          Audit CSV
         </button>
         <button class="btn">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
@@ -201,9 +232,14 @@
 
           <!-- Footer -->
           <div class="queue-footer">
-            <button class="btn btn-sm">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="13" height="13" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/></svg>
-              Copy reviewer link
+            <button class="btn btn-sm" on:click={() => copyLink(q.url, i)}>
+              {#if copiedIdx === i}
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5 10 17.5l9-11"/></svg>
+                Copied ✓
+              {:else}
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="13" height="13" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/></svg>
+                Copy reviewer link
+              {/if}
             </button>
             <div class="queue-footer-spacer"></div>
             <button class="btn btn-primary btn-sm" on:click={() => onNavigate('/demo/review-projects/proj_8fa221/queues/q1')}>
@@ -218,6 +254,10 @@
 </div>
 
 <!-- ── SETTINGS MODAL ── -->
+{#if csvToast}
+  <div class="toast">{csvToast}</div>
+{/if}
+
 {#if showSettings}
   <div class="modal-overlay" on:click={() => showSettings = false} role="dialog" aria-modal="true">
     <div class="modal" on:click|stopPropagation>
@@ -247,8 +287,7 @@
             <div class="setting-desc">Markdown shown to reviewers while they work. Saving replaces the default for all queues.</div>
           </div>
           <div class="setting-control">
-            <textarea class="setting-textarea" rows="4">## Review guidelines
-Keep sources that do original local reporting at least weekly. Remove aggregators, syndicate-only mirrors, and defunct sites. Skip when unsure and leave a note.</textarea>
+            <textarea class="setting-textarea" rows="5" bind:value={localGuidelines}></textarea>
           </div>
         </div>
         <div class="setting-row setting-row-toggle">
@@ -272,8 +311,9 @@ Keep sources that do original local reporting at least weekly. Remove aggregator
       </div>
 
       <div class="modal-footer">
+        {#if guidelinesSaved}<span class="saved-note">Saved ✓</span>{/if}
         <button class="btn" on:click={() => showSettings = false}>Cancel</button>
-        <button class="btn btn-primary" on:click={() => showSettings = false}>Save changes</button>
+        <button class="btn btn-primary" on:click={handleSaveSettings}>Save changes</button>
       </div>
     </div>
   </div>
@@ -622,7 +662,29 @@ Keep sources that do original local reporting at least weekly. Remove aggregator
     border-top: 1px solid var(--v2-line-soft);
     background: var(--v2-surface);
     display: flex;
+    align-items: center;
     justify-content: flex-end;
     gap: 10px;
+  }
+  .saved-note {
+    margin-right: auto;
+    font-size: 13.5px;
+    font-weight: 500;
+    color: var(--v2-accent-ink);
+  }
+
+  /* ── CSV toast ── */
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    padding: 10px 20px; border-radius: 999px;
+    background: var(--v2-ink); color: #fff;
+    font-size: 14px; font-weight: 500; font-family: var(--v2-sans);
+    box-shadow: 0 8px 24px -8px rgba(0,0,0,.28);
+    z-index: 200;
+    animation: fadeIn .2s ease;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateX(-50%) translateY(8px); }
+    to   { opacity: 1; transform: translateX(-50%) translateY(0); }
   }
 </style>
