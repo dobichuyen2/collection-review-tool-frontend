@@ -54,6 +54,10 @@ export const sessionCounts = derived(reviewState, ($s) => {
 
 // ── Action functions ──────────────────────────────────────────────────────────
 
+export function navigateToSource(idx) {
+  reviewState.update(s => ({ ...s, sourceIdx: Math.max(0, Math.min(QUEUE_SOURCES.length - 1, idx)) }));
+}
+
 export function decideSource(verdict, reason = null) {
   reviewState.update(s => {
     const src = QUEUE_SOURCES[s.sourceIdx];

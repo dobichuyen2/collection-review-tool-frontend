@@ -2,7 +2,7 @@
   import Nav from './Nav.svelte';
   import {
     reviewState, sessionCounts, QUEUE_SOURCES,
-    decideSource, proposeSource, saveSourceMeta,
+    decideSource, proposeSource, saveSourceMeta, navigateToSource,
   } from './mockStore.js';
 
   export let onNavigate = () => {};
@@ -104,10 +104,10 @@
         </div>
         <div class="done-actions">
           <button class="btn btn-primary" on:click={() => onNavigate('/demo/review-projects/proj_8fa221/queues/q1')}>
-            Back to your queue
+            Back to queue
           </button>
-          <button class="btn" on:click={() => onNavigate('/demo/manage')}>
-            Return to Manage
+          <button class="btn" on:click={() => onNavigate('/demo/review-projects/proj_8fa221/queues/q1/decisions')}>
+            Check all decisions
           </button>
         </div>
       </div>
@@ -122,27 +122,27 @@
           Back to queue
         </button>
         <div class="action-divider"></div>
-        <button class="btn btn-sm" disabled>
+        <button class="btn btn-sm"
+          disabled={$reviewState.sourceIdx === 0}
+          on:click={() => navigateToSource($reviewState.sourceIdx - 1)}>
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="transform:rotate(180deg)"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
           Prev
         </button>
-        <button class="btn btn-sm" disabled>
+        <button class="btn btn-sm"
+          disabled={$reviewState.sourceIdx >= QUEUE_SOURCES.length - 1}
+          on:click={() => navigateToSource($reviewState.sourceIdx + 1)}>
           Next
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
         </button>
 
         <div class="progress-pill">
-          <span class="progress-current">{$sessionCounts.totalDecided}</span>
-          <span class="progress-sep">/ {$sessionCounts.queueTotal}</span>
-          <div class="progress-mini-track">
-            <div class="progress-mini-fill" style:width="{($sessionCounts.totalDecided / $sessionCounts.queueTotal) * 100}%"></div>
-          </div>
-          <span class="progress-pct-sm">{Math.round(($sessionCounts.totalDecided / $sessionCounts.queueTotal) * 100)}%</span>
+          <span class="progress-current">{$reviewState.sourceIdx + 1}</span>
+          <span class="progress-sep">of {QUEUE_SOURCES.length}</span>
         </div>
 
         <div class="action-spacer"></div>
 
-        <button class="btn btn-sm">
+        <button class="btn btn-sm" on:click={() => onNavigate('/demo/review-projects/proj_8fa221/queues/q1/decisions')}>
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2 8l10 5 10-5z"/><path d="m2 14 10 5 10-5M2 11l10 5 10-5"/></svg>
           All decisions · {$sessionCounts.totalDecided}
         </button>
@@ -415,9 +415,6 @@
   }
   .progress-current { font-weight: 600; font-family: var(--v2-mono); }
   .progress-sep     { color: var(--v2-mute); }
-  .progress-mini-track { width: 120px; height: 5px; background: var(--v2-line-soft); border-radius: 999px; overflow: hidden; }
-  .progress-mini-fill  { height: 100%; background: var(--v2-accent); transition: width .3s; }
-  .progress-pct-sm { color: var(--v2-mute); font-family: var(--v2-mono); font-size: 14px; }
 
   /* ── Main grid ── */
   .main-grid {
