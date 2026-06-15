@@ -92,8 +92,16 @@
     onNavigate('/demo/review-projects/proj_8fa221');
   }
 
+  /* ── Projects pagination (10 per page, newest first) ── */
+  let projectsPage = 0;
+  $: projectsTotal = $projectsStore.length;
+  $: projectsStart = projectsPage * 10;
+  $: projectsEnd   = Math.min(projectsStart + 10, projectsTotal);
+  $: projectsItems = $projectsStore.slice(projectsStart, projectsEnd);
+  $: hasPrevPage   = projectsPage > 0;
+  $: hasNextPage   = projectsEnd < projectsTotal;
+
   /* ── See-all modals ── */
-  let showAllProjects   = false;
   let showAllInProgress = false;
   let showAllCompleted  = false;
 </script>
@@ -227,10 +235,6 @@
       <h2 class="section-title">Review projects</h2>
     </div>
     <div class="section-header-actions">
-      <button class="btn btn-sm" on:click={() => showAllProjects = true}>
-        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M9 7h8v8"/></svg>
-        See all
-      </button>
       <button class="btn" on:click={() => showNewProject = true}>
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
         New project
@@ -249,10 +253,10 @@
         <div></div>
       </div>
       <!-- Table rows -->
-      {#each $projectsStore.slice(0, 10) as r}
+      {#each projectsItems as r}
         <button
           class="projects-row"
-          on:click={() => onNavigate('/demo/review-projects/proj_8fa221')}
+          on:click={() => onNavigate(`/demo/review-projects/${r.guid}`)}
         >
           <div class="project-avatar">{r.name[0]}</div>
           <div class="project-meta">
@@ -277,6 +281,13 @@
       {/each}
     </div>
   </div>
+  {#if projectsTotal > 10}
+  <div class="pagination">
+    <button class="btn btn-sm" disabled={!hasPrevPage} on:click={() => projectsPage--}>← Previous</button>
+    <span class="pagination-counter">{projectsStart + 1}–{projectsEnd} of {projectsTotal}</span>
+    <button class="btn btn-sm" disabled={!hasNextPage} on:click={() => projectsPage++}>Next 10 →</button>
+  </div>
+  {/if}
 
   <!-- ─────────────── LOWER CARDS ─────────────── -->
   <div class="lower-section">
@@ -431,32 +442,6 @@
       Start review project
     </button>
   </form>
-</Modal>
-
-<!-- All projects -->
-<Modal show={showAllProjects} title="All review projects" on:close={() => showAllProjects = false}>
-  <div class="modal-list">
-    {#each $projectsStore as r, i}
-      <button
-        class="modal-row"
-        class:first={i === 0}
-        on:click={() => { showAllProjects = false; onNavigate('/demo/review-projects/proj_8fa221'); }}
-      >
-        <div class="project-avatar sm">{r.name[0]}</div>
-        <div class="review-info">
-          <div class="review-name">{r.name}</div>
-          <div class="review-id">{r.seeds} seed {r.seeds === 1 ? 'collection' : 'collections'} · {r.queueCount} {r.queueCount === 1 ? 'queue' : 'queues'}</div>
-        </div>
-        <div class="modal-row-right">
-          {#if r.status === 'completed'}
-            <span class="chip chip-skipped"><span class="chip-dot chip-dot-skipped"></span>Closed</span>
-          {:else}
-            <span class="pct-badge">{Math.round(r.progress * 100)}%</span>
-          {/if}
-        </div>
-      </button>
-    {/each}
-  </div>
 </Modal>
 
 <!-- All in-progress -->
@@ -729,6 +714,15 @@
   .progress-fill.fill-ink  { background: var(--v2-ink); }
   .progress-pct { font-size: 14px; color: var(--v2-body); font-family: var(--v2-mono); min-width: 36px; text-align: right; }
   .project-arrow { text-align: right; color: var(--v2-mute); }
+
+  /* ── Pagination ── */
+  .pagination {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 22px 0;
+    font-family: var(--v2-sans);
+  }
+  .pagination-counter { font-size: 13.5px; color: var(--v2-mute); font-family: var(--v2-mono); flex: 1; text-align: center; }
+  .btn:disabled { opacity: .35; cursor: not-allowed; pointer-events: none; }
 
   /* ── Lower section ── */
   .lower-section { padding: 44px 72px 0; display: flex; flex-direction: column; gap: 44px; }
