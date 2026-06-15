@@ -1,8 +1,9 @@
 <script>
   import Nav from './Nav.svelte';
   import {
-    reviewState, sessionCounts, QUEUE_SOURCES,
-    decideSource, proposeSource, saveSourceMeta, navigateToSource,
+    reviewState, sessionCounts, decisionsStore,
+    QUEUE_SOURCES,
+    decideSource, redecideCurrentSource, proposeSource, saveSourceMeta, navigateToSource,
   } from './mockStore.js';
 
   export let onNavigate = () => {};
@@ -12,6 +13,10 @@
   $: src = QUEUE_SOURCES[$reviewState.sourceIdx] ?? null;
   $: allDone = src === null;
 
+  // Whether this source has already been decided (navigated back with Prev)
+  $: q1Decisions = $decisionsStore['proj_8fa221']?.['Queue #1'] ?? [];
+  $: currentDecision = src ? (q1Decisions.find(d => d.source === src.title) ?? null) : null;
+
   // Merge store meta-overrides onto the static source record.
   $: meta = src ? [
     { k: 'language', label: 'Language',    v: ($reviewState.metaOverrides[src.id]?.language ?? src.language) },
@@ -20,7 +25,7 @@
   ] : [];
 
   // ── Metadata editing ──────────────────────────────────────────────────────
-  let editingField = null; // field key while editing
+  let editingField = null;
   let editVal = '';
 
   function startEdit(field) { editingField = field.k; editVal = field.v; }
@@ -31,7 +36,6 @@
   }
   function cancelEdit() { editingField = null; }
 
-  // Reset edit state + local-only "correct" confirmations when source changes.
   let confirmedFields = {};
   $: if ($reviewState.sourceIdx || $reviewState.sourceIdx === 0) {
     editingField    = null;
@@ -41,17 +45,54 @@
   function toggleConfirm(k) {
     confirmedFields = { ...confirmedFields, [k]: !confirmedFields[k] };
   }
-  $: isConfirmed = (k) => confirmedFields[k] ?? (k !== 'state'); // state starts unchecked
+  $: isConfirmed = (k) => confirmedFields[k] ?? (k !== 'state');
+
+  // ── Reason modal (Fix 5) ─────────────────────────────────────────────────
+  // Keep and Remove require a reason before committing.
+  let reasonModal = null; // { pendingVerdict: 'keep' | 'remove' }
+  let reasonText = '';
+  $: reasonVerbLabel = reasonModal?.pendingVerdict === 'keep' ? 'Keep' : 'Remove';
+  $: reasonCanConfirm = reasonText.trim().length > 0;
+
+  function openReasonModal(verdict) {
+    reasonModal = { pendingVerdict: verdict };
+    reasonText  = currentDecision?.reason ?? '';
+  }
+
+  function cancelReason() {
+    reasonModal = null;
+    reasonText  = '';
+  }
+
+  function confirmReason() {
+    if (!reasonCanConfirm) return;
+    const reason = reasonText.trim();
+    const v = reasonModal.pendingVerdict;
+    if (currentDecision !== null) {
+      redecideCurrentSource(v, reason);
+    } else {
+      decideSource(v, reason);
+    }
+    reasonModal = null;
+    reasonText  = '';
+  }
 
   // ── Decisions ─────────────────────────────────────────────────────────────
-  function keep()   { decideSource('keep');   }
-  function remove() { decideSource('remove'); }
-  function skip()   { decideSource('skip');   }
+  // Keep/Remove open reason modal; Skip is immediate.
+  function keep()   { openReasonModal('keep'); }
+  function remove() { openReasonModal('remove'); }
+  function skip() {
+    if (currentDecision !== null) {
+      redecideCurrentSource('skip', null);
+    } else {
+      decideSource('skip', null);
+    }
+  }
 
   // Keyboard shortcuts
   function onKey(e) {
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-    if (allDone) return;
+    if (allDone || reasonModal) return;
     if (e.key === 'k' || e.key === 'Enter') keep();
     if (e.key === 'r') remove();
     if (e.key === 's') skip();
@@ -102,11 +143,14 @@
             </div>
           {/each}
         </div>
+        <!-- Fix 2: primary = Back to review at last source; secondary = decisions page -->
         <div class="done-actions">
-          <button class="btn btn-primary" on:click={() => onNavigate('/demo/review-projects/proj_8fa221/queues/q1')}>
-            Back to queue
+          <button class="btn btn-primary" on:click={() => { navigateToSource(QUEUE_SOURCES.length - 1); onNavigate('/demo/reviews/124'); }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="transform:rotate(180deg)"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+            Back to review
           </button>
           <button class="btn" on:click={() => onNavigate('/demo/review-projects/proj_8fa221/queues/q1/decisions')}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2 8l10 5 10-5z"/><path d="m2 14 10 5 10-5M2 11l10 5 10-5"/></svg>
             Check all decisions
           </button>
         </div>
@@ -167,6 +211,15 @@
               <span class="chip chip-neutral"><span class="chip-dot chip-dot-mute"></span>Existing source</span>
             {/if}
             <span class="chip chip-neutral">{src.mediaType}</span>
+            <!-- Fix 3: show current decision badge when revisiting -->
+            {#if currentDecision}
+              {@const VCOLORS = { kept: '#E25C40', removed: '#1A1C1F', added: '#F5A48A', skipped: '#9CA0A8' }}
+              {@const VLABELS = { kept: 'Kept', removed: 'Removed', added: 'Added', skipped: 'Skipped' }}
+              <span class="chip chip-decided" style:background="{VCOLORS[currentDecision.verdict]}1a" style:color={VCOLORS[currentDecision.verdict]}>
+                <span class="chip-dot" style:background={VCOLORS[currentDecision.verdict]}></span>
+                {VLABELS[currentDecision.verdict]}
+              </span>
+            {/if}
           </div>
           <h1 class="source-title">{src.title}</h1>
           <div class="source-links">
@@ -179,6 +232,9 @@
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M9 7h8v8"/></svg>
             </a>
           </div>
+          {#if currentDecision?.reason}
+            <div class="prev-reason">Previous note: "{currentDecision.reason}"</div>
+          {/if}
         </div>
 
         <!-- Metadata section -->
@@ -204,12 +260,10 @@
               {:else}
                 <div class="meta-value">{field.v}</div>
                 <div class="meta-actions">
-                  <!-- Correct is local-only: no backend write path (see BACKEND-GAPS.md) -->
                   <button
                     class="correct-label"
                     class:correct-yes={isConfirmed(field.k)}
                     on:click={() => toggleConfirm(field.k)}
-                    title="Local-only toggle — no backend write path (BACKEND-GAPS.md)"
                   >
                     <span class="checkbox" class:checked={isConfirmed(field.k)}>
                       {#if isConfirmed(field.k)}
@@ -232,17 +286,29 @@
         <!-- Decision dock -->
         <div class="decision-dock">
           <span class="dock-label">Decide</span>
-          <button class="dock-btn dock-remove" on:click={remove}>
+          <button
+            class="dock-btn dock-remove"
+            class:dock-active-remove={currentDecision?.verdict === 'removed'}
+            on:click={remove}
+          >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
             Remove
             <kbd class="kbd">R</kbd>
           </button>
-          <button class="dock-btn dock-skip" on:click={skip}>
+          <button
+            class="dock-btn dock-skip"
+            class:dock-active-skip={currentDecision?.verdict === 'skipped'}
+            on:click={skip}
+          >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="m6 4 8 8-8 8M14 4v16"/></svg>
             Skip for now
             <kbd class="kbd">S</kbd>
           </button>
-          <button class="dock-btn dock-keep" on:click={keep}>
+          <button
+            class="dock-btn dock-keep"
+            class:dock-active-keep={currentDecision?.verdict === 'kept'}
+            on:click={keep}
+          >
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5 10 17.5l9-11"/></svg>
             Keep
             <kbd class="kbd kbd-light">K · ↵</kbd>
@@ -305,6 +371,51 @@
     </div>
   {/if}
 
+  <!-- ── REASON MODAL (Fix 5 — required for Keep / Remove) ──────────────── -->
+  {#if reasonModal}
+    <div class="modal-overlay" on:click={cancelReason} role="dialog" aria-modal="true">
+      <div class="modal" on:click|stopPropagation>
+        <div class="modal-header">
+          <div>
+            <div class="modal-title" style:color={reasonModal.pendingVerdict === 'keep' ? '#E25C40' : '#1A1C1F'}>
+              {reasonVerbLabel}: {src?.title}
+            </div>
+            <div class="modal-subtitle">Provide a reason before confirming — it will appear in the decisions list and audit CSV.</div>
+          </div>
+          <button class="modal-close" on:click={cancelReason}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="field-group">
+            <label class="field-label" for="reason-input">
+              Reason <span class="required-star">*</span>
+            </label>
+            <textarea
+              id="reason-input"
+              class="reason-textarea"
+              bind:value={reasonText}
+              placeholder="Why are you {reasonModal.pendingVerdict === 'keep' ? 'keeping' : 'removing'} this source?"
+              rows="4"
+              autofocus
+            ></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn" on:click={cancelReason}>Cancel</button>
+          <button
+            class="btn btn-primary"
+            class:btn-dim={!reasonCanConfirm}
+            style:background={reasonModal.pendingVerdict === 'keep' ? '#E25C40' : '#1A1C1F'}
+            on:click={confirmReason}
+          >
+            Confirm {reasonVerbLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  {/if}
+
   <!-- ── PROPOSE NEW SOURCE MODAL ──────────────────────────────────────── -->
   {#if showPropose}
     <div class="modal-overlay" on:click={() => showPropose = false} role="dialog" aria-modal="true">
@@ -358,59 +469,42 @@
 
   /* ── All-done state ── */
   .done-wrap {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 70vh;
-    padding: 40px;
+    display: flex; align-items: center; justify-content: center;
+    min-height: 70vh; padding: 40px;
   }
   .done-card {
     text-align: center;
-    background: var(--v2-card);
-    border: 1px solid var(--v2-line);
-    border-radius: 20px;
-    padding: 44px 52px;
-    max-width: 480px;
+    background: var(--v2-card); border: 1px solid var(--v2-line); border-radius: 20px;
+    padding: 44px 52px; max-width: 480px;
   }
   .done-icon {
     width: 48px; height: 48px; border-radius: 50%;
-    background: var(--v2-accent);
-    color: #fff;
-    display: grid; place-items: center;
-    margin: 0 auto 20px;
+    background: var(--v2-accent); color: #fff;
+    display: grid; place-items: center; margin: 0 auto 20px;
   }
-  .done-h2 { font-size: 28px; font-weight: 600; letter-spacing: -0.7px; margin: 0 0 8px; }
+  .done-h2  { font-size: 28px; font-weight: 600; letter-spacing: -0.7px; margin: 0 0 8px; }
   .done-sub { font-size: 15px; color: var(--v2-body); margin: 0 0 28px; line-height: 1.5; }
-  .done-tally {
-    display: flex; gap: 16px; justify-content: center; flex-wrap: wrap;
-    margin-bottom: 28px;
-  }
-  .done-stat { display: flex; align-items: center; gap: 6px; font-size: 15px; }
-  .done-dot { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
-  .done-n { font-weight: 600; font-family: var(--v2-mono); }
-  .done-l { color: var(--v2-body); }
+  .done-tally { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; margin-bottom: 28px; }
+  .done-stat  { display: flex; align-items: center; gap: 6px; font-size: 15px; }
+  .done-dot   { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+  .done-n     { font-weight: 600; font-family: var(--v2-mono); }
+  .done-l     { color: var(--v2-body); }
   .done-actions { display: flex; gap: 10px; justify-content: center; }
 
   /* ── Action bar ── */
   .action-bar-wrap { padding: 34px 40px 0; }
   .action-bar {
-    padding: 10px 14px;
-    display: flex; align-items: center; gap: 10px;
-    background: rgba(255,255,255,.84);
-    backdrop-filter: blur(8px);
+    padding: 10px 14px; display: flex; align-items: center; gap: 10px;
+    background: rgba(255,255,255,.84); backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
-    border: 1px solid var(--v2-line);
-    border-radius: 16px;
+    border: 1px solid var(--v2-line); border-radius: 16px;
   }
   .action-divider { height: 18px; width: 1px; background: var(--v2-line); flex-shrink: 0; }
   .action-spacer  { flex: 1; }
-
   .progress-pill {
     display: flex; align-items: center; gap: 10px;
-    padding: 5px 12px;
-    background: var(--v2-surface);
-    border: 1px solid var(--v2-line);
-    border-radius: 8px;
+    padding: 5px 12px; background: var(--v2-surface);
+    border: 1px solid var(--v2-line); border-radius: 8px;
     font-size: 13.5px; margin-left: 6px;
   }
   .progress-current { font-weight: 600; font-family: var(--v2-mono); }
@@ -418,11 +512,8 @@
 
   /* ── Main grid ── */
   .main-grid {
-    padding: 34px 40px 0;
-    display: grid;
-    grid-template-columns: 1fr 340px;
-    gap: 28px;
-    align-items: flex-start;
+    padding: 34px 40px 0; display: grid;
+    grid-template-columns: 1fr 340px; gap: 28px; align-items: flex-start;
   }
 
   /* ── Cards ── */
@@ -449,213 +540,115 @@
   .chips-row { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
   .chip {
     display: inline-flex; align-items: center; gap: 6px;
-    padding: 3px 9px; border-radius: 999px;
-    font-size: 13.5px; font-weight: 500;
+    padding: 3px 9px; border-radius: 999px; font-size: 13.5px; font-weight: 500;
   }
-  .chip-accent  { background: var(--v2-accent-soft); color: var(--v2-accent-ink); }
-  .chip-neutral { background: var(--v2-neutral);     color: var(--v2-body);       }
+  .chip-accent   { background: var(--v2-accent-soft); color: var(--v2-accent-ink); }
+  .chip-neutral  { background: var(--v2-neutral);     color: var(--v2-body);       }
+  .chip-decided  { font-weight: 600; }
   .chip-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
   .chip-dot-accent { background: var(--v2-accent); }
   .chip-dot-mute   { background: var(--v2-mute); }
 
-  .source-title {
-    font-size: 44px; font-weight: 600;
-    letter-spacing: -1.2px; line-height: 1.02;
-    margin: 0; color: var(--v2-ink);
-  }
-  .source-links {
-    display: flex; align-items: center; gap: 22px;
-    margin-top: 12px; font-size: 13.5px; flex-wrap: wrap;
-  }
-  .source-link-static {
-    display: inline-flex; align-items: center; gap: 6px;
-    color: var(--v2-body);
-  }
-  .source-link {
-    display: inline-flex; align-items: center; gap: 6px;
-    color: var(--v2-accent); text-decoration: none; font-weight: 500;
-  }
+  .source-title { font-size: 44px; font-weight: 600; letter-spacing: -1.2px; line-height: 1.02; margin: 0; color: var(--v2-ink); }
+  .source-links { display: flex; align-items: center; gap: 22px; margin-top: 12px; font-size: 13.5px; flex-wrap: wrap; }
+  .source-link-static { display: inline-flex; align-items: center; gap: 6px; color: var(--v2-body); }
+  .source-link { display: inline-flex; align-items: center; gap: 6px; color: var(--v2-accent); text-decoration: none; font-weight: 500; }
   .source-link:hover { text-decoration: underline; }
+  .prev-reason { margin-top: 8px; font-size: 13px; color: var(--v2-mute); font-style: italic; }
 
   /* ── Metadata ── */
-  .meta-heading-row {
-    border-top: 1px solid var(--v2-line-soft);
-    margin-top: 18px; padding: 14px 28px;
-    display: flex; align-items: center; justify-content: space-between;
-  }
+  .meta-heading-row { border-top: 1px solid var(--v2-line-soft); margin-top: 18px; padding: 14px 28px; display: flex; align-items: center; justify-content: space-between; }
   .meta-heading { font-size: 16px; font-weight: 600; }
   .meta-hint    { font-size: 13.5px; color: var(--v2-mute); }
-
-  .meta-grid {
-    display: grid; grid-template-columns: repeat(3, 1fr);
-    border-top: 1px solid var(--v2-line-soft);
-  }
+  .meta-grid { display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid var(--v2-line-soft); }
   .meta-cell { padding: 18px 22px; }
   .meta-cell.has-right-border { border-right: 1px solid var(--v2-line-soft); }
-
-  .meta-label {
-    font-size: 14px; color: var(--v2-mute);
-    letter-spacing: .5px; text-transform: uppercase; font-weight: 500;
-  }
+  .meta-label { font-size: 14px; color: var(--v2-mute); letter-spacing: .5px; text-transform: uppercase; font-weight: 500; }
   .meta-value { font-size: 15px; font-weight: 600; letter-spacing: -0.4px; margin-top: 6px; }
-  .meta-actions {
-    margin-top: 14px; display: flex; align-items: center; justify-content: space-between;
-  }
-  .meta-edit-input {
-    width: 100%; margin-top: 6px; padding: 7px 10px;
-    border: 1.5px solid var(--v2-accent);
-    border-radius: 8px; font-size: 15px; font-weight: 500;
-    font-family: var(--v2-sans); outline: none;
-    background: #fff; color: var(--v2-ink);
-  }
+  .meta-actions { margin-top: 14px; display: flex; align-items: center; justify-content: space-between; }
+  .meta-edit-input { width: 100%; margin-top: 6px; padding: 7px 10px; border: 1.5px solid var(--v2-accent); border-radius: 8px; font-size: 15px; font-weight: 500; font-family: var(--v2-sans); outline: none; background: #fff; color: var(--v2-ink); }
   .meta-edit-actions { display: flex; gap: 6px; margin-top: 10px; }
-
-  .correct-label {
-    display: inline-flex; align-items: center; gap: 7px;
-    font-size: 14px; color: var(--v2-body); cursor: pointer;
-    background: none; border: none; padding: 0; font-family: var(--v2-sans);
-  }
+  .correct-label { display: inline-flex; align-items: center; gap: 7px; font-size: 14px; color: var(--v2-body); cursor: pointer; background: none; border: none; padding: 0; font-family: var(--v2-sans); }
   .correct-label.correct-yes { color: var(--v2-accent-ink); }
-  .checkbox {
-    width: 15px; height: 15px; border-radius: 4px;
-    background: #fff; border: 1.5px solid var(--v2-line);
-    display: grid; place-items: center; flex-shrink: 0;
-  }
+  .checkbox { width: 15px; height: 15px; border-radius: 4px; background: #fff; border: 1.5px solid var(--v2-line); display: grid; place-items: center; flex-shrink: 0; }
   .checkbox.checked { background: var(--v2-accent); border-color: var(--v2-accent); }
-
-  .meta-local-note {
-    padding: 8px 28px 14px;
-    font-size: 12.5px; color: var(--v2-mute);
-    display: flex; align-items: flex-start; gap: 6px;
-    border-top: 1px solid var(--v2-line-soft);
-    line-height: 1.5;
-  }
+  .meta-local-note { padding: 8px 28px 14px; font-size: 12.5px; color: var(--v2-mute); display: flex; align-items: flex-start; gap: 6px; border-top: 1px solid var(--v2-line-soft); line-height: 1.5; }
   .meta-local-note svg { flex-shrink: 0; margin-top: 1px; }
 
   /* ── Decision dock ── */
-  .decision-dock {
-    padding: 16px 22px;
-    display: flex; align-items: center; gap: 10px;
-  }
-  .dock-label {
-    font-size: 14px; color: var(--v2-mute);
-    letter-spacing: .5px; text-transform: uppercase; font-weight: 500;
-    margin-right: 6px; white-space: nowrap; flex-shrink: 0;
-  }
+  .decision-dock { padding: 16px 22px; display: flex; align-items: center; gap: 10px; }
+  .dock-label { font-size: 14px; color: var(--v2-mute); letter-spacing: .5px; text-transform: uppercase; font-weight: 500; margin-right: 6px; white-space: nowrap; flex-shrink: 0; }
   .dock-btn {
     flex: 1; display: flex; align-items: center; justify-content: center;
     gap: 10px; padding: 13px 14px; border-radius: 12px;
     font-family: var(--v2-sans); font-size: 14px; font-weight: 500; cursor: pointer;
-    transition: opacity .12s;
+    transition: opacity .12s, box-shadow .15s;
   }
   .dock-btn:hover  { opacity: .85; }
   .dock-btn:active { opacity: .7; transform: scale(.98); }
   .dock-remove { background: #fff; border: 1px solid var(--v2-removed-soft); color: var(--v2-removed); }
   .dock-skip   { background: #fff; border: 1px solid var(--v2-skipped-soft); color: var(--v2-skipped); }
-  .dock-keep   {
-    flex: 1.4;
-    background: var(--v2-kept); border: none; color: #fff; font-weight: 600;
-    box-shadow: 0 2px 0 rgba(0,0,0,.06), inset 0 1px 0 rgba(255,255,255,.18);
-  }
+  .dock-keep   { flex: 1.4; background: var(--v2-kept); border: none; color: #fff; font-weight: 600; box-shadow: 0 2px 0 rgba(0,0,0,.06), inset 0 1px 0 rgba(255,255,255,.18); }
+  /* Active highlights for re-decide (Fix 3) */
+  .dock-active-keep   { box-shadow: 0 0 0 3px rgba(226,92,64,.35), inset 0 1px 0 rgba(255,255,255,.18) !important; }
+  .dock-active-remove { box-shadow: 0 0 0 3px rgba(26,28,31,.22) !important; background: #f4f4f4 !important; }
+  .dock-active-skip   { box-shadow: 0 0 0 3px rgba(156,160,168,.35) !important; background: #f7f7f8 !important; }
   .kbd       { padding: 1.5px 6px; background: rgba(0,0,0,.07); border-radius: 4px; font-size: 12.5px; font-family: var(--v2-mono); font-weight: 500; color: inherit; }
   .kbd-light { background: rgba(255,255,255,.22); color: #fff; }
 
   /* ── Sidebar ── */
   .sidebar { display: flex; flex-direction: column; gap: 16px; }
-
-  .sidebar-card-header {
-    padding: 12px 18px; border-bottom: 1px solid var(--v2-line-soft);
-    display: flex; align-items: center; gap: 8px;
-  }
-  .sidebar-card-header-plain {
-    padding: 12px 18px; border-bottom: 1px solid var(--v2-line-soft);
-  }
+  .sidebar-card-header { padding: 12px 18px; border-bottom: 1px solid var(--v2-line-soft); display: flex; align-items: center; gap: 8px; }
+  .sidebar-card-header-plain { padding: 12px 18px; border-bottom: 1px solid var(--v2-line-soft); }
   .sidebar-card-title { font-size: 15.5px; font-weight: 600; }
   .header-icon { color: var(--v2-accent); }
-
   .guidelines-list { padding: 10px 18px 14px; display: flex; flex-direction: column; gap: 6px; }
   .guideline-row { display: flex; gap: 10px; font-size: 14px; align-items: baseline; }
   .guideline-verb { font-weight: 600; min-width: 50px; }
   .guideline-text { color: var(--v2-body); }
-
-  .status-grid {
-    padding: 14px 18px; display: grid;
-    grid-template-columns: 1fr 1fr; gap: 10px;
-  }
-  .status-cell {
-    padding: 10px 12px; background: var(--v2-surface);
-    border-radius: 10px; border: 1px solid var(--v2-line-soft);
-  }
-  .status-label {
-    display: inline-flex; align-items: center; gap: 6px;
-    font-size: 12.5px; color: var(--v2-mute);
-    text-transform: uppercase; letter-spacing: .6px; font-weight: 500;
-  }
+  .status-grid { padding: 14px 18px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .status-cell { padding: 10px 12px; background: var(--v2-surface); border-radius: 10px; border: 1px solid var(--v2-line-soft); }
+  .status-label { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--v2-mute); text-transform: uppercase; letter-spacing: .6px; font-weight: 500; }
   .status-dot { width: 7px; height: 7px; border-radius: 2px; flex-shrink: 0; }
-  .status-val {
-    font-size: 15px; font-weight: 600;
-    letter-spacing: -0.5px; font-family: var(--v2-mono); margin-top: 4px;
-    transition: color .2s;
-  }
+  .status-val { font-size: 15px; font-weight: 600; letter-spacing: -0.5px; font-family: var(--v2-mono); margin-top: 4px; transition: color .2s; }
+  .position-note { font-size: 13px; color: var(--v2-mute); text-align: center; font-family: var(--v2-mono); padding: 0 4px; }
 
-  .position-note {
-    font-size: 13px; color: var(--v2-mute);
-    text-align: center; font-family: var(--v2-mono);
-    padding: 0 4px;
-  }
-
-  /* ── Propose-new-source modal ── */
-  .modal-overlay {
-    position: fixed; inset: 0;
-    background: rgba(20,23,30,.38);
-    backdrop-filter: blur(4px);
-    display: flex; align-items: center; justify-content: center;
-    z-index: 100;
-  }
-  .modal {
-    background: var(--v2-card);
-    border: 1px solid var(--v2-line);
-    border-radius: 20px;
-    width: 480px; max-width: 96vw;
-    box-shadow: 0 24px 60px -20px rgba(0,0,0,.28);
-    overflow: hidden;
-  }
-  .modal-header {
-    padding: 20px 22px;
-    border-bottom: 1px solid var(--v2-line-soft);
-    display: flex; align-items: flex-start; justify-content: space-between; gap: 14px;
-  }
-  .modal-title    { font-size: 16px; font-weight: 600; }
-  .modal-subtitle { font-size: 13.5px; color: var(--v2-mute); margin-top: 4px; }
-  .modal-close {
-    background: none; border: none; cursor: pointer;
-    color: var(--v2-mute); padding: 4px; border-radius: 6px; flex-shrink: 0;
-  }
-  .modal-body   { padding: 18px 22px; display: flex; flex-direction: column; gap: 16px; }
-  .modal-footer {
-    padding: 14px 22px; border-top: 1px solid var(--v2-line-soft);
-    display: flex; align-items: center; justify-content: flex-end; gap: 10px;
-  }
-
-  .field-group  { display: flex; flex-direction: column; gap: 6px; }
-  .field-label  { font-size: 14px; font-weight: 500; color: var(--v2-body); }
-  .field-input  {
-    padding: 10px 14px; border-radius: 10px;
-    border: 1.5px solid var(--v2-line);
-    font-size: 15px; font-family: var(--v2-sans);
-    color: var(--v2-ink); outline: none;
+  /* ── Reason modal (Fix 5) ── */
+  .reason-textarea {
+    width: 100%; padding: 12px 14px; border-radius: 10px;
+    border: 1.5px solid var(--v2-line); font-size: 15px; font-family: var(--v2-sans);
+    color: var(--v2-ink); outline: none; resize: vertical; line-height: 1.5;
     background: var(--v2-surface);
   }
+  .reason-textarea:focus { border-color: var(--v2-accent); }
+  .required-star { color: var(--v2-accent); font-weight: 700; }
+
+  /* ── Modals (shared) ── */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(20,23,30,.38);
+    backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 100;
+  }
+  .modal {
+    background: var(--v2-card); border: 1px solid var(--v2-line); border-radius: 20px;
+    width: 480px; max-width: 96vw; box-shadow: 0 24px 60px -20px rgba(0,0,0,.28); overflow: hidden;
+  }
+  .modal-header { padding: 20px 22px; border-bottom: 1px solid var(--v2-line-soft); display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; }
+  .modal-title    { font-size: 16px; font-weight: 600; }
+  .modal-subtitle { font-size: 13.5px; color: var(--v2-mute); margin-top: 4px; line-height: 1.4; }
+  .modal-close    { background: none; border: none; cursor: pointer; color: var(--v2-mute); padding: 4px; border-radius: 6px; flex-shrink: 0; }
+  .modal-body     { padding: 18px 22px; display: flex; flex-direction: column; gap: 16px; }
+  .modal-footer   { padding: 14px 22px; border-top: 1px solid var(--v2-line-soft); display: flex; align-items: center; justify-content: flex-end; gap: 10px; }
+  .field-group { display: flex; flex-direction: column; gap: 6px; }
+  .field-label { font-size: 14px; font-weight: 500; color: var(--v2-body); }
+  .field-input { padding: 10px 14px; border-radius: 10px; border: 1.5px solid var(--v2-line); font-size: 15px; font-family: var(--v2-sans); color: var(--v2-ink); outline: none; background: var(--v2-surface); }
   .field-input:focus { border-color: var(--v2-accent); }
 
   /* ── Toast ── */
   .toast {
     position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
-    padding: 10px 20px; border-radius: 999px;
-    background: var(--v2-ink); color: #fff;
+    padding: 10px 20px; border-radius: 999px; background: var(--v2-ink); color: #fff;
     font-size: 14px; font-weight: 500; font-family: var(--v2-sans);
-    box-shadow: 0 8px 24px -8px rgba(0,0,0,.28);
-    z-index: 200;
+    box-shadow: 0 8px 24px -8px rgba(0,0,0,.28); z-index: 200;
     animation: fadeIn .2s ease;
   }
   @keyframes fadeIn { from { opacity: 0; transform: translateX(-50%) translateY(8px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }

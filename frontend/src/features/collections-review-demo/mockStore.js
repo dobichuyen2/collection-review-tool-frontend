@@ -1,18 +1,17 @@
-import { writable, derived } from 'svelte/store';
+import { writable, derived, get } from 'svelte/store';
+import { PROJECTS } from './mockData.js';
 
-// Six sources the reviewer will step through in the demo queue.
+// ── Queue sources for the live demo session (proj_8fa221 / q1) ───────────
+// These 6 sources are distinct from the 7 background sources already in Q1's
+// decisions array, so the live reviewer is deciding fresh sources.
 export const QUEUE_SOURCES = [
-  { id: 'src_001', title: 'The Capital Gazette',     homepage: 'capitalgazette.com',     isNew: false, language: 'English', country: 'United States', state: 'Maryland',      mediaType: 'Local · Daily'       },
-  { id: 'src_002', title: 'Baltimore Banner',         homepage: 'thebaltimorebanner.com', isNew: false, language: 'English', country: 'United States', state: 'Maryland',      mediaType: 'Non-profit · Online' },
-  { id: 'src_003', title: 'Delaware Online',          homepage: 'delawareonline.com',     isNew: false, language: 'English', country: 'United States', state: 'Delaware',      mediaType: 'Local · Daily'       },
-  { id: 'src_004', title: 'WTOP News',                homepage: 'wtop.com',               isNew: false, language: 'English', country: 'United States', state: 'Washington DC', mediaType: 'Radio · Online'      },
-  { id: 'src_005', title: 'Virginia Mercury',         homepage: 'virginiamercury.com',    isNew: false, language: 'English', country: 'United States', state: 'Virginia',      mediaType: 'Non-profit · Online' },
-  { id: 'src_006', title: 'Washington City Paper',    homepage: 'washingtoncitypaper.com',isNew: true,  language: 'English', country: 'United States', state: 'Washington DC', mediaType: 'Alt-Weekly'          },
+  { id: 'src_001', title: 'The Capital Gazette',  homepage: 'capitalgazette.com',     isNew: false, language: 'English', country: 'United States', state: 'Maryland',      mediaType: 'Local · Daily'       },
+  { id: 'src_002', title: 'Baltimore Banner',      homepage: 'thebaltimorebanner.com', isNew: false, language: 'English', country: 'United States', state: 'Maryland',      mediaType: 'Non-profit · Online' },
+  { id: 'src_003', title: 'Delaware Online',       homepage: 'delawareonline.com',     isNew: false, language: 'English', country: 'United States', state: 'Delaware',      mediaType: 'Local · Daily'       },
+  { id: 'src_004', title: 'WTOP News',             homepage: 'wtop.com',               isNew: false, language: 'English', country: 'United States', state: 'Washington DC', mediaType: 'Radio · Online'      },
+  { id: 'src_005', title: 'Virginia Mercury',      homepage: 'virginiamercury.com',    isNew: false, language: 'English', country: 'United States', state: 'Virginia',      mediaType: 'Non-profit · Online' },
+  { id: 'src_006', title: 'Washington City Paper', homepage: 'washingtoncitypaper.com',isNew: true,  language: 'English', country: 'United States', state: 'Washington DC', mediaType: 'Alt-Weekly'          },
 ];
-
-// Pre-existing Queue #1 stats before the demo session starts.
-// Reviewer is picking up mid-queue.
-export const BASE = { kept: 5, removed: 1, added: 1, skipped: 0, decided: 7, total: 13, undecided: 6 };
 
 export const GUIDELINES_DEFAULT =
 `## Review guidelines
@@ -23,58 +22,121 @@ export const GUIDELINES_DEFAULT =
 
 **Skip** when you're unsure — leave a note for the lead reviewer.`;
 
-const INITIAL = {
+// ── Master decisions store ────────────────────────────────────────────────
+// Shape: { [projectGuid]: { [queueId]: Array<DecisionEntry> } }
+// DecisionEntry: { source, homepage, verdict, queue, country, reason }
+//
+// This is the single source of truth for every count shown on every screen.
+// DemoProject, DemoQueueLanding, DemoDecisions, and sessionCounts all derive
+// from this store. decideSource / proposeSource / changeDecision all write here.
+
+function initDecisions() {
+  const all = {};
+  for (const [guid, proj] of Object.entries(PROJECTS)) {
+    all[guid] = {};
+    for (const q of proj.queues) {
+      all[guid][q.id] = proj.decisions.filter(d => d.queue === q.id).map(d => ({ ...d }));
+    }
+  }
+  return all;
+}
+
+export const decisionsStore = writable(initDecisions());
+
+// ── Reviewer nav state (position + settings — NOT decisions) ─────────────
+const INITIAL_REVIEWER = {
   sourceIdx:     0,
-  decisions:     {}, // { src_id: { verdict: 'keep'|'remove'|'skip', reason: string|null } }
-  addedSources:  [], // [{ label, homepage }]
   guidelines:    GUIDELINES_DEFAULT,
-  metaOverrides: {}, // { src_id: { language?, country?, state? } }
+  metaOverrides: {},
 };
+export const reviewState = writable(INITIAL_REVIEWER);
 
-export const reviewState = writable(INITIAL);
+// ── sessionCounts: Q1 stats for proj_8fa221 derived from decisionsStore ──
+const Q1_TOTAL = PROJECTS['proj_8fa221'].queues.find(q => q.guid === 'q1').total;
 
-export const sessionCounts = derived(reviewState, ($s) => {
-  const decs     = Object.values($s.decisions);
-  const kept     = decs.filter(d => d.verdict === 'keep').length;
-  const removed  = decs.filter(d => d.verdict === 'remove').length;
-  const skipped  = decs.filter(d => d.verdict === 'skip').length;
-  const added    = $s.addedSources.length;
-  const decided  = kept + removed + skipped;
+export const sessionCounts = derived(decisionsStore, ($d) => {
+  const q1    = $d['proj_8fa221']?.['Queue #1'] ?? [];
+  const kept    = q1.filter(d => d.verdict === 'kept').length;
+  const removed = q1.filter(d => d.verdict === 'removed').length;
+  const added   = q1.filter(d => d.verdict === 'added').length;
+  const skipped = q1.filter(d => d.verdict === 'skipped').length;
+  const decided = kept + removed + added + skipped;
   return {
     kept, removed, skipped, added, decided,
-    totalKept:      BASE.kept      + kept,
-    totalRemoved:   BASE.removed   + removed,
-    totalSkipped:   BASE.skipped   + skipped,
-    totalAdded:     BASE.added     + added,
-    totalDecided:   BASE.decided   + decided,
-    totalUndecided: Math.max(0, BASE.undecided - decided),
-    queueTotal:     BASE.total,
+    totalKept:      kept,
+    totalRemoved:   removed,
+    totalSkipped:   skipped,
+    totalAdded:     added,
+    totalDecided:   decided,
+    totalUndecided: Math.max(0, Q1_TOTAL - decided),
+    queueTotal:     Q1_TOTAL,
   };
 });
 
-// ── Action functions ──────────────────────────────────────────────────────────
-
-export function navigateToSource(idx) {
-  reviewState.update(s => ({ ...s, sourceIdx: Math.max(0, Math.min(QUEUE_SOURCES.length - 1, idx)) }));
+// ── Internal write helper ─────────────────────────────────────────────────
+function _normalizeVerdict(v) {
+  if (v === 'keep')   return 'kept';
+  if (v === 'remove') return 'removed';
+  if (v === 'skip')   return 'skipped';
+  return v; // already normalized
 }
 
+function _writeDecision(projectGuid, queueId, source, homepage, rawVerdict, country, reason) {
+  const verdict = _normalizeVerdict(rawVerdict);
+  decisionsStore.update(all => {
+    const list = [...(all[projectGuid]?.[queueId] ?? [])];
+    const idx  = list.findIndex(d => d.source === source);
+    const entry = { source, homepage, verdict, queue: queueId, country, reason: reason ?? null };
+    if (idx >= 0) { list[idx] = entry; } else { list.push(entry); }
+    return { ...all, [projectGuid]: { ...all[projectGuid], [queueId]: list } };
+  });
+}
+
+// ── Action functions ──────────────────────────────────────────────────────
+
+// Decide the current QUEUE_SOURCE and advance to the next.
 export function decideSource(verdict, reason = null) {
   reviewState.update(s => {
     const src = QUEUE_SOURCES[s.sourceIdx];
     if (!src) return s;
-    return {
-      ...s,
-      decisions:  { ...s.decisions, [src.id]: { verdict, reason } },
-      sourceIdx:  s.sourceIdx + 1,
-    };
+    _writeDecision('proj_8fa221', 'Queue #1', src.title, src.homepage, verdict, src.country, reason);
+    return { ...s, sourceIdx: s.sourceIdx + 1 };
   });
 }
 
+// Re-decide the current QUEUE_SOURCE WITHOUT advancing (used when navigating back).
+export function redecideCurrentSource(verdict, reason = null) {
+  reviewState.update(s => {
+    const src = QUEUE_SOURCES[s.sourceIdx];
+    if (!src) return s;
+    _writeDecision('proj_8fa221', 'Queue #1', src.title, src.homepage, verdict, src.country, reason);
+    return s;
+  });
+}
+
+// Propose a brand-new source (adds as 'added' to Q1).
 export function proposeSource(label, homepage) {
-  reviewState.update(s => ({
-    ...s,
-    addedSources: [...s.addedSources, { label, homepage }],
-  }));
+  _writeDecision('proj_8fa221', 'Queue #1', label, homepage, 'added', 'US', null);
+}
+
+// Change any decision in any queue (used by Decisions page and bucket modals).
+export function changeDecision(projectGuid, queueId, sourceName, newVerdict, reason) {
+  decisionsStore.update(all => {
+    const list = [...(all[projectGuid]?.[queueId] ?? [])];
+    const idx  = list.findIndex(d => d.source === sourceName);
+    if (idx >= 0) {
+      list[idx] = {
+        ...list[idx],
+        verdict: _normalizeVerdict(newVerdict),
+        reason: reason !== undefined ? reason : list[idx].reason,
+      };
+    }
+    return { ...all, [projectGuid]: { ...all[projectGuid], [queueId]: list } };
+  });
+}
+
+export function navigateToSource(idx) {
+  reviewState.update(s => ({ ...s, sourceIdx: Math.max(0, Math.min(QUEUE_SOURCES.length - 1, idx)) }));
 }
 
 export function saveGuidelines(text) {
@@ -84,15 +146,11 @@ export function saveGuidelines(text) {
 export function saveSourceMeta(srcId, patch) {
   reviewState.update(s => ({
     ...s,
-    metaOverrides: {
-      ...s.metaOverrides,
-      [srcId]: { ...(s.metaOverrides[srcId] || {}), ...patch },
-    },
+    metaOverrides: { ...s.metaOverrides, [srcId]: { ...(s.metaOverrides[srcId] || {}), ...patch } },
   }));
 }
 
-// ── Projects store ────────────────────────────────────────────────────────────
-
+// ── Projects store (for Manage / All-projects lists) ─────────────────────
 export const KNOWN_COLLECTIONS = {
   '34412803': { name: 'US · Top Online Local · 2024', sources: 318 },
   '29571100': { name: 'Brazil · Top Online · 2025',   sources: 412 },
@@ -125,24 +183,20 @@ export function addProject(name, seeds) {
   }, ...ps]);
 }
 
-// Trigger a mock CSV download in the browser.
-export function downloadCSV(type, state) {
-  let headers, rows, filename;
-  const { decisions, addedSources } = state;
+// ── CSV export ────────────────────────────────────────────────────────────
+export function downloadCSV(type) {
+  const allDecisions = get(decisionsStore);
+  const q1 = allDecisions['proj_8fa221']?.['Queue #1'] ?? [];
 
+  let headers, rows, filename;
   if (type === 'project') {
     headers  = ['media_id', 'name', 'url', 'decision'];
-    rows     = QUEUE_SOURCES
-      .filter(s => decisions[s.id]?.verdict === 'keep')
-      .map(s  => [s.id, s.title, s.homepage, 'keep']);
-    addedSources.forEach(s => rows.push(['', s.label, s.homepage, 'add']));
+    rows     = q1.filter(d => d.verdict === 'kept' || d.verdict === 'added')
+                 .map(d => ['', d.source, d.homepage, d.verdict]);
     filename = 'climate-east-coast-project.csv';
   } else {
-    headers  = ['media_id', 'name', 'url', 'decision', 'removal_reason', 'queue'];
-    rows     = QUEUE_SOURCES
-      .filter(s => decisions[s.id])
-      .map(s  => [s.id, s.title, s.homepage, decisions[s.id].verdict, decisions[s.id].reason || '', 'Queue #1']);
-    addedSources.forEach(s => rows.push(['', s.label, s.homepage, 'add', '', 'Queue #1']));
+    headers  = ['media_id', 'name', 'url', 'decision', 'reason', 'queue'];
+    rows     = q1.map(d => ['', d.source, d.homepage, d.verdict, d.reason || '', 'Queue #1']);
     filename = 'climate-east-coast-audit.csv';
   }
 

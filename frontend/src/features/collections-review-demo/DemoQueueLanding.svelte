@@ -2,7 +2,8 @@
   import Nav from './Nav.svelte';
   import DecisionBar from './DecisionBar.svelte';
   import { PROJECTS } from './mockData.js';
-  import { sessionCounts } from './mockStore.js';
+  import { decisionsStore, changeDecision } from './mockStore.js';
+  import { get } from 'svelte/store';
 
   export let onNavigate = () => {};
   export let navVariant = 'glass';
@@ -15,51 +16,88 @@
   const p = PROJECTS[projectGuid] ?? PROJECTS['proj_8fa221'];
   const q = p.queues.find(qq => qq.guid === queueGuid) ?? p.queues[0];
 
-  // Only proj_8fa221/q1 is the live review session; everything else shows static mock stats.
-  const isActiveQueue = projectGuid === 'proj_8fa221' && q.guid === 'q1';
+  // ── Derive queue stats from decisionsStore ────────────────────────────
+  function computeStats(decisions) {
+    const kept    = decisions.filter(d => d.verdict === 'kept').length;
+    const removed = decisions.filter(d => d.verdict === 'removed').length;
+    const added   = decisions.filter(d => d.verdict === 'added').length;
+    const skipped = decisions.filter(d => d.verdict === 'skipped').length;
+    const decided = kept + removed + added + skipped;
+    return { kept, removed, added, skipped, decided, undecided: Math.max(0, q.total - decided) };
+  }
 
-  $: displayStats = isActiveQueue ? {
-    decided:   $sessionCounts.totalDecided,
-    kept:      $sessionCounts.totalKept,
-    removed:   $sessionCounts.totalRemoved,
-    added:     $sessionCounts.totalAdded,
-    skipped:   $sessionCounts.totalSkipped,
-    undecided: $sessionCounts.totalUndecided,
-  } : {
-    decided:   q.done,
-    kept:      q.kept,
-    removed:   q.removed,
-    added:     q.added,
-    skipped:   q.skipped,
-    undecided: q.undecided,
-  };
-
+  $: qDecisions = $decisionsStore[projectGuid]?.[q.id] ?? [];
+  $: displayStats = computeStats(qDecisions);
+  $: queuePct = q.total > 0 ? Math.round(displayStats.decided / q.total * 100) : 0;
   $: queueTotals = {
-    reviewed:  displayStats.decided,
-    kept:      displayStats.kept,
-    removed:   displayStats.removed,
-    added:     displayStats.added,
-    skipped:   displayStats.skipped,
+    reviewed: displayStats.decided,
+    kept: displayStats.kept,
+    removed: displayStats.removed,
+    added: displayStats.added,
+    skipped: displayStats.skipped,
     undecided: displayStats.undecided,
   };
-  $: queuePct = q.total > 0 ? Math.round(displayStats.decided / q.total * 100) : 0;
 
-  $: DECISIONS = [
-    { k: 'kept',    n: 'Kept',    v: displayStats.kept,    color: '#E25C40' },
-    { k: 'removed', n: 'Removed', v: displayStats.removed, color: '#1A1C1F' },
-    { k: 'added',   n: 'Added',   v: displayStats.added,   color: '#F5A48A' },
-    { k: 'skipped', n: 'Skipped', v: displayStats.skipped, color: '#9CA0A8' },
+  // ── Project-level totals from decisionsStore ─────────────────────────
+  $: projectQueues = p.queues.map(qq => {
+    const qd  = $decisionsStore[projectGuid]?.[qq.id] ?? [];
+    const qs  = computeStats(qd);
+    return { ...qq, ...qs };
+  });
+  $: projectDone  = projectQueues.reduce((s, qq) => s + qq.decided, 0);
+  $: projectTotal = p.queues.reduce((s, qq) => s + qq.total, 0);
+  $: projectPct   = projectTotal > 0 ? Math.round(projectDone / projectTotal * 100) : 0;
+
+  const DECISION_TILES = [
+    { k: 'kept',    label: 'Kept',    color: '#E25C40' },
+    { k: 'removed', label: 'Removed', color: '#1A1C1F' },
+    { k: 'added',   label: 'Added',   color: '#F5A48A' },
+    { k: 'skipped', label: 'Skipped', color: '#9CA0A8' },
   ];
+
+  const VERDICT_LABELS  = { kept: 'Kept', removed: 'Removed', added: 'Added', skipped: 'Skipped' };
+  const VERDICT_COLORS  = { kept: '#E25C40', removed: '#1A1C1F', added: '#F5A48A', skipped: '#9CA0A8' };
 
   let highlight = null;
 
-  function queueStatus(qq) {
-    if (qq.done === qq.total) return 'Completed';
-    if (qq.done === 0) return 'Unassigned';
-    return 'In progress';
+  // ── Bucket modal (Fix 4) ─────────────────────────────────────────────
+  let bucketModal = null; // { verdict, sources }
+
+  function openBucket(verdict) {
+    const sources = (get(decisionsStore)[projectGuid]?.[q.id] ?? []).filter(d => d.verdict === verdict);
+    bucketModal = { verdict, sources };
   }
 
-  const projectTotal = p.totals.reviewed + p.totals.undecided;
+  // sync bucket list when store changes
+  $: if (bucketModal) {
+    const sources = ($decisionsStore[projectGuid]?.[q.id] ?? []).filter(d => d.verdict === bucketModal.verdict);
+    bucketModal = { ...bucketModal, sources };
+  }
+
+  let bucketChangeTarget = null;
+  let bucketNewVerdict = '';
+  let bucketReason = '';
+  $: bucketReasonRequired = bucketNewVerdict === 'kept' || bucketNewVerdict === 'removed';
+  $: bucketCanConfirm = bucketNewVerdict && (!bucketReasonRequired || bucketReason.trim());
+
+  function openBucketChange(d) {
+    bucketChangeTarget = { source: d.source };
+    bucketNewVerdict = d.verdict;
+    bucketReason = d.reason || '';
+  }
+
+  function confirmBucketChange() {
+    if (!bucketCanConfirm) return;
+    changeDecision(projectGuid, q.id, bucketChangeTarget.source, bucketNewVerdict, bucketReason.trim() || null);
+    bucketChangeTarget = null;
+    bucketReason = '';
+  }
+
+  function queueStatusLabel(qq) {
+    if (qq.decided === qq.total && qq.total > 0) return 'Completed';
+    if (qq.decided === 0) return 'Unassigned';
+    return 'In progress';
+  }
 </script>
 
 <div class="landing">
@@ -108,7 +146,7 @@
 
       <div class="browse-label">Browse your decisions</div>
       <div class="decision-grid">
-        {#each DECISIONS as b}
+        {#each DECISION_TILES as b}
           <button
             class="decision-btn"
             style:border-color={highlight === b.k ? b.color : 'var(--v2-line)'}
@@ -117,13 +155,14 @@
             on:mouseleave={() => highlight = null}
             on:focus={() => highlight = b.k}
             on:blur={() => highlight = null}
+            on:click={() => openBucket(b.k)}
           >
             <div>
               <div class="decision-label-row">
                 <span class="decision-swatch" style:background={b.color}></span>
-                {b.n}
+                {b.label}
               </div>
-              <div class="decision-count">{b.v}</div>
+              <div class="decision-count">{displayStats[b.k]}</div>
             </div>
             <svg
               width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"
@@ -153,17 +192,17 @@
       <div class="status-header">
         <span class="card-title">Project status</span>
         <span class="card-header-right">
-          {p.totals.reviewed.toLocaleString()} / {projectTotal.toLocaleString()} sources · {Math.round(p.progress * 100)}%
+          {projectDone.toLocaleString()} / {projectTotal.toLocaleString()} sources · {projectPct}%
         </span>
       </div>
       <div class="queues-grid" style:grid-template-columns="repeat({p.queues.length}, 1fr)">
-        {#each p.queues as qq, i}
+        {#each projectQueues as qq, i}
           <div class="queue-col" class:has-divider={i > 0}>
             <div class="queue-name">{qq.id}</div>
             <div class="queue-done">
-              {qq.done}<span class="queue-total"> / {qq.total}</span>
+              {qq.decided}<span class="queue-total"> / {qq.total}</span>
             </div>
-            <div class="queue-status">{queueStatus(qq)}</div>
+            <div class="queue-status">{queueStatusLabel(qq)}</div>
           </div>
         {/each}
       </div>
@@ -171,49 +210,86 @@
   </div>
 </div>
 
+<!-- ── BUCKET MODAL (Fix 4) ── -->
+{#if bucketModal}
+  <div class="modal-overlay" on:click={() => { bucketModal = null; bucketChangeTarget = null; }} role="dialog" aria-modal="true">
+    <div class="modal" on:click|stopPropagation>
+      <div class="modal-header">
+        <div>
+          <div class="modal-title" style:color={VERDICT_COLORS[bucketModal.verdict]}>
+            {VERDICT_LABELS[bucketModal.verdict]}
+            <span class="modal-count">{bucketModal.sources.length}</span>
+          </div>
+          <div class="modal-subtitle">{q.id} · {p.name}</div>
+        </div>
+        <button class="modal-close" on:click={() => { bucketModal = null; bucketChangeTarget = null; }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+        </button>
+      </div>
+
+      {#if bucketModal.sources.length === 0}
+        <div class="bucket-empty">No sources in this bucket yet.</div>
+      {:else}
+        <div class="bucket-list">
+          {#each bucketModal.sources as d}
+            {@const isChanging = bucketChangeTarget?.source === d.source}
+            <div class="bucket-row" class:bucket-row-changing={isChanging}>
+              <div class="bucket-info">
+                <div class="bucket-source">{d.source}</div>
+                <div class="bucket-meta">{d.homepage}</div>
+                {#if d.reason}<div class="bucket-reason">"{d.reason}"</div>{/if}
+              </div>
+              {#if isChanging}
+                <div class="bucket-change-form">
+                  <div class="verdict-chips">
+                    {#each ['kept','removed','added','skipped'] as v}
+                      <button
+                        class="verdict-chip-btn"
+                        class:verdict-chip-active={bucketNewVerdict === v}
+                        style:--c={VERDICT_COLORS[v]}
+                        on:click={() => bucketNewVerdict = v}
+                      >{VERDICT_LABELS[v]}</button>
+                    {/each}
+                  </div>
+                  {#if bucketReasonRequired || bucketReason}
+                    <textarea
+                      class="bucket-reason-input"
+                      bind:value={bucketReason}
+                      placeholder={bucketReasonRequired ? 'Reason required…' : 'Note (optional)…'}
+                      rows="2"
+                    ></textarea>
+                  {/if}
+                  <div class="bucket-change-actions">
+                    <button class="btn btn-sm" on:click={() => { bucketChangeTarget = null; bucketReason = ''; }}>Cancel</button>
+                    <button class="btn btn-sm btn-primary" class:btn-dim={!bucketCanConfirm} on:click={confirmBucketChange}>Save</button>
+                  </div>
+                </div>
+              {:else}
+                <button class="btn btn-sm" on:click={() => openBucketChange(d)}>Change</button>
+              {/if}
+            </div>
+          {/each}
+        </div>
+      {/if}
+    </div>
+  </div>
+{/if}
+
 <style>
   .landing {
-    width: 100%;
-    min-height: 820px;
-    background: var(--v2-bg);
-    color: var(--v2-ink);
-    font-family: var(--v2-sans);
-    padding-bottom: 36px;
+    width: 100%; min-height: 820px;
+    background: var(--v2-bg); color: var(--v2-ink);
+    font-family: var(--v2-sans); padding-bottom: 36px;
   }
 
   /* ── Hero ── */
   .hero { padding: 32px 72px 0; }
-  .hero-eyebrow {
-    font-size: 13.5px;
-    color: var(--v2-mute);
-    font-family: var(--v2-mono);
-    margin-bottom: 10px;
-  }
-  .hero-h1 {
-    font-size: 54px;
-    font-weight: 600;
-    letter-spacing: -1.8px;
-    margin: 0;
-    line-height: 1.04;
-    color: var(--v2-ink);
-    max-width: 900px;
-  }
-
+  .hero-eyebrow { font-size: 13.5px; color: var(--v2-mute); font-family: var(--v2-mono); margin-bottom: 10px; }
+  .hero-h1 { font-size: 54px; font-weight: 600; letter-spacing: -1.8px; margin: 0; line-height: 1.04; color: var(--v2-ink); max-width: 900px; }
   .chips-row { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
-  .chip {
-    display: inline-flex; align-items: center; gap: 6px;
-    padding: 3px 9px; border-radius: 999px;
-    font-size: 13.5px; font-weight: 500; font-family: var(--v2-sans);
-  }
+  .chip { display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px; border-radius: 999px; font-size: 13.5px; font-weight: 500; font-family: var(--v2-sans); }
   .chip-neutral { background: var(--v2-neutral); color: var(--v2-body); }
-
-  .about-tool {
-    margin: 18px 0 0;
-    max-width: 920px;
-    font-size: 15.5px;
-    line-height: 1.6;
-    color: var(--v2-body);
-  }
+  .about-tool { margin: 18px 0 0; max-width: 920px; font-size: 15.5px; line-height: 1.6; color: var(--v2-body); }
   .about-label { font-weight: 500; color: var(--v2-ink); }
   .about-kept    { color: var(--v2-kept);    font-weight: 600; }
   .about-removed { color: var(--v2-removed); font-weight: 600; }
@@ -224,86 +300,34 @@
   .section-pad-sm { padding: 32px 72px 0; }
 
   /* ── Card ── */
-  .card {
-    background: var(--v2-card);
-    border: 1px solid var(--v2-line);
-    border-radius: 16px;
-    overflow: hidden;
-  }
-  .card-header {
-    padding: 16px 24px;
-    border-bottom: 1px solid var(--v2-line-soft);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
+  .card { background: var(--v2-card); border: 1px solid var(--v2-line); border-radius: 16px; overflow: hidden; }
+  .card-header { padding: 16px 24px; border-bottom: 1px solid var(--v2-line-soft); display: flex; align-items: center; justify-content: space-between; }
   .card-title { font-size: 16px; font-weight: 600; }
   .card-header-right { font-size: 14px; color: var(--v2-mute); font-family: var(--v2-mono); }
 
-  /* ── Progress section ── */
+  /* ── Progress ── */
   .progress-section { padding: 22px 24px; }
-  .progress-row {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-  }
+  .progress-row { display: flex; align-items: baseline; justify-content: space-between; }
   .progress-label { font-size: 15px; color: var(--v2-body); }
   .mono { font-family: var(--v2-mono); font-weight: 600; color: var(--v2-ink); }
   .progress-pct { font-size: 15px; color: var(--v2-mute); font-family: var(--v2-mono); }
   .bar-wrap { margin-top: 10px; }
 
   /* ── Decision tiles ── */
-  .browse-label {
-    padding: 0 24px 6px;
-    font-size: 14px;
-    color: var(--v2-mute);
-  }
-  .decision-grid {
-    padding: 8px 18px 18px;
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 10px;
-  }
+  .browse-label { padding: 0 24px 6px; font-size: 14px; color: var(--v2-mute); }
+  .decision-grid { padding: 8px 18px 18px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
   .decision-btn {
-    padding: 14px 16px;
-    border-radius: 12px;
-    border: 1px solid var(--v2-line);
-    background: #fff;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    cursor: pointer;
-    font-family: var(--v2-sans);
-    text-align: left;
-    transition: border-color .2s ease, background .2s ease;
-    width: 100%;
+    padding: 14px 16px; border-radius: 12px; border: 1px solid var(--v2-line); background: #fff;
+    display: flex; align-items: center; justify-content: space-between;
+    cursor: pointer; font-family: var(--v2-sans); text-align: left;
+    transition: border-color .2s ease, background .2s ease; width: 100%;
   }
-  .decision-label-row {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 15px;
-    color: var(--v2-body);
-    font-weight: 500;
-  }
+  .decision-label-row { display: inline-flex; align-items: center; gap: 8px; font-size: 15px; color: var(--v2-body); font-weight: 500; }
   .decision-swatch { width: 9px; height: 9px; border-radius: 3px; flex-shrink: 0; }
-  .decision-count {
-    font-size: 26px;
-    font-weight: 600;
-    letter-spacing: -0.7px;
-    font-family: var(--v2-mono);
-    margin-top: 4px;
-    color: var(--v2-ink);
-  }
+  .decision-count { font-size: 26px; font-weight: 600; letter-spacing: -0.7px; font-family: var(--v2-mono); margin-top: 4px; color: var(--v2-ink); }
 
   /* ── Card footer ── */
-  .card-footer {
-    padding: 14px 24px 18px;
-    border-top: 1px solid var(--v2-line-soft);
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
+  .card-footer { padding: 14px 24px 18px; border-top: 1px solid var(--v2-line-soft); display: flex; align-items: center; gap: 10px; }
 
   /* ── Buttons ── */
   .btn {
@@ -315,35 +339,49 @@
     cursor: pointer; white-space: nowrap;
     box-shadow: 0 1px 0 rgba(0,0,0,.02);
   }
-  .btn-primary {
-    background: var(--v2-ink); color: #fff; border: none;
-    box-shadow: 0 1px 0 rgba(0,0,0,.04), inset 0 1px 0 rgba(255,255,255,.18);
-  }
+  .btn-primary { background: var(--v2-ink); color: #fff; border: none; box-shadow: 0 1px 0 rgba(0,0,0,.04), inset 0 1px 0 rgba(255,255,255,.18); }
+  .btn-sm { padding: 7px 12px; font-size: 12.5px; }
   .btn-lg { padding: 12px 22px; font-size: 15px; }
+  .btn-dim { opacity: .45; pointer-events: none; }
 
   /* ── Project status ── */
-  .status-header {
-    padding: 16px 24px;
-    border-bottom: 1px solid var(--v2-line-soft);
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 22px;
-  }
-  .queues-grid {
-    padding: 16px 24px;
-    display: grid;
-    gap: 22px;
-  }
+  .status-header { padding: 16px 24px; border-bottom: 1px solid var(--v2-line-soft); display: flex; align-items: baseline; justify-content: space-between; gap: 22px; }
+  .queues-grid { padding: 16px 24px; display: grid; gap: 22px; }
   .queue-col { display: flex; flex-direction: column; gap: 4px; padding-left: 18px; }
   .queue-col:first-child { padding-left: 0; }
   .queue-col.has-divider { border-left: 1px solid var(--v2-line-soft); }
-
   .queue-name { font-size: 14px; color: var(--v2-body); font-weight: 500; }
-  .queue-done {
-    font-size: 22px; font-weight: 600;
-    font-family: var(--v2-mono); letter-spacing: -0.5px; color: var(--v2-ink);
-  }
+  .queue-done { font-size: 22px; font-weight: 600; font-family: var(--v2-mono); letter-spacing: -0.5px; color: var(--v2-ink); }
   .queue-total { font-size: 14px; color: var(--v2-mute); font-weight: 400; }
   .queue-status { font-size: 13.5px; color: var(--v2-mute); }
+
+  /* ── Bucket modal ── */
+  .modal-overlay {
+    position: fixed; inset: 0; z-index: 60;
+    background: rgba(20,23,30,.42); backdrop-filter: blur(3px);
+    display: flex; align-items: flex-start; justify-content: center;
+    padding: 56px 24px; overflow-y: auto;
+  }
+  .modal { width: 100%; max-width: 520px; background: var(--v2-card); border-radius: 18px; border: 1px solid var(--v2-line); box-shadow: 0 30px 70px -24px rgba(20,23,30,.45); overflow: hidden; flex-shrink: 0; }
+  .modal-header { padding: 18px 24px; border-bottom: 1px solid var(--v2-line-soft); display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; }
+  .modal-title { font-size: 19px; font-weight: 600; color: var(--v2-ink); display: flex; align-items: center; gap: 10px; }
+  .modal-count { font-size: 15px; font-weight: 400; color: var(--v2-mute); font-family: var(--v2-mono); }
+  .modal-subtitle { font-size: 13.5px; color: var(--v2-mute); margin-top: 3px; }
+  .modal-close { width: 30px; height: 30px; border-radius: 8px; border: 1px solid var(--v2-line); background: #fff; color: var(--v2-body); cursor: pointer; display: grid; place-items: center; flex-shrink: 0; }
+  .bucket-empty { padding: 32px 24px; text-align: center; color: var(--v2-mute); font-size: 14px; }
+  .bucket-list { max-height: 400px; overflow-y: auto; }
+  .bucket-row { padding: 14px 24px; border-top: 1px solid var(--v2-line-soft); display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; }
+  .bucket-row:first-child { border-top: none; }
+  .bucket-row-changing { background: var(--v2-line-soft); }
+  .bucket-info { flex: 1; min-width: 0; }
+  .bucket-source { font-size: 14.5px; font-weight: 500; color: var(--v2-ink); }
+  .bucket-meta { font-size: 13px; color: var(--v2-mute); font-family: var(--v2-mono); margin-top: 2px; }
+  .bucket-reason { font-size: 13px; color: var(--v2-body); font-style: italic; margin-top: 4px; }
+  .bucket-change-form { flex: 1; }
+  .verdict-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+  .verdict-chip-btn { padding: 5px 11px; border-radius: 999px; border: 1px solid var(--v2-line); background: var(--v2-card); color: var(--v2-body); font-size: 12.5px; font-family: var(--v2-sans); cursor: pointer; transition: border-color .15s, background .15s; }
+  .verdict-chip-btn:hover { border-color: var(--c); }
+  .verdict-chip-active { border-color: var(--c) !important; background: color-mix(in srgb, var(--c) 10%, white); color: var(--c); font-weight: 600; }
+  .bucket-reason-input { width: 100%; border: 1px solid var(--v2-line); border-radius: 8px; padding: 7px 10px; font-size: 13px; font-family: var(--v2-sans); color: var(--v2-ink); resize: none; outline: none; margin-bottom: 8px; }
+  .bucket-change-actions { display: flex; gap: 8px; }
 </style>
