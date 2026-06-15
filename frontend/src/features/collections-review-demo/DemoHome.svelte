@@ -433,7 +433,9 @@
           <div class="review-name">{r.name}</div>
           <div class="review-id">{r.closedAt}</div>
         </div>
-        <span class="chip chip-skipped"><span class="chip-dot chip-dot-skipped"></span>Closed</span>
+        <div class="modal-row-right">
+          <span class="chip chip-skipped"><span class="chip-dot chip-dot-skipped"></span>Closed</span>
+        </div>
       </div>
     {/each}
   </div>
@@ -743,7 +745,7 @@
   .modal-row.first { border-top: none; }
   .modal-row:is(button):hover { background: #f8f8f8; }
   .modal-row .review-info { flex: 1; min-width: 0; }
-  .modal-row-right { display: flex; align-items: center; }
+  .modal-row-right { display: flex; align-items: center; flex-shrink: 0; }
   .modal-progress { flex-shrink: 0; width: 140px; }
   .pct-badge { font-size: 13.5px; font-family: var(--v2-mono); color: var(--v2-mute); }
 </style>
