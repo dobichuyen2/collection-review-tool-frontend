@@ -12,7 +12,7 @@ export const QUEUE_SOURCES = [
 
 // Pre-existing Queue #1 stats before the demo session starts.
 // Reviewer is picking up mid-queue.
-export const BASE = { kept: 76, removed: 35, added: 3, skipped: 10, decided: 124, total: 200, undecided: 76 };
+export const BASE = { kept: 5, removed: 1, added: 1, skipped: 0, decided: 7, total: 13, undecided: 6 };
 
 export const GUIDELINES_DEFAULT =
 `## Review guidelines
@@ -97,10 +97,10 @@ export const KNOWN_COLLECTIONS = {
 };
 
 const PROJECTS_INITIAL = [
-  { guid: 'proj_8fa221', name: 'Climate Reporting · US East Coast',  status: 'in_progress', seeds: 5, queueCount: 4, progress: 0.62, closedAt: null },
-  { guid: 'proj_b3c9d1', name: 'Spanish-language outlets · LATAM',   status: 'in_progress', seeds: 8, queueCount: 6, progress: 0.34, closedAt: null },
-  { guid: 'proj_a7f3e2', name: 'Top Online · Brazil 2025',           status: 'in_progress', seeds: 3, queueCount: 3, progress: 0.41, closedAt: null },
-  { guid: 'proj_d4c5b6', name: 'AI-generated content sweep',         status: 'in_progress', seeds: 2, queueCount: 2, progress: 0.18, closedAt: null },
+  { guid: 'proj_8fa221', name: 'Climate Reporting · US East Coast',  status: 'in_progress', seeds: 5, queueCount: 4, progress: 0.35, closedAt: null },
+  { guid: 'proj_b3c9d1', name: 'Spanish-language outlets · LATAM',   status: 'in_progress', seeds: 8, queueCount: 6, progress: 0.38, closedAt: null },
+  { guid: 'proj_a7f3e2', name: 'Top Online · Brazil 2025',           status: 'in_progress', seeds: 3, queueCount: 3, progress: 0.48, closedAt: null },
+  { guid: 'proj_d4c5b6', name: 'AI-generated content sweep',         status: 'in_progress', seeds: 2, queueCount: 2, progress: 0.60, closedAt: null },
   { guid: 'proj_f1e2a3', name: 'Public broadcasters · EU',           status: 'completed',   seeds: 4, queueCount: 3, progress: 1,    closedAt: 'closed Apr 12' },
   { guid: 'proj_c2d3e4', name: 'Top Online · Brazil 2024',           status: 'completed',   seeds: 2, queueCount: 2, progress: 1,    closedAt: 'closed Mar 03' },
 ];
