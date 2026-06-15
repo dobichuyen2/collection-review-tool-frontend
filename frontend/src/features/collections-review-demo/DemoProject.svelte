@@ -2,13 +2,16 @@
   import { get } from 'svelte/store';
   import Nav from './Nav.svelte';
   import DecisionBar from './DecisionBar.svelte';
-  import { MOCK } from './mockData.js';
-  import { reviewState, sessionCounts, saveGuidelines, downloadCSV } from './mockStore.js';
+  import { PROJECTS } from './mockData.js';
+  import { reviewState, saveGuidelines, downloadCSV } from './mockStore.js';
 
   export let onNavigate = () => {};
   export let navVariant = 'glass';
 
-  const p = MOCK.project;
+  const projectGuid = window.location.pathname.split('/').pop();
+  const p = PROJECTS[projectGuid] ?? null;
+  const heroMain = p ? p.name.split(' · ')[0] : '';
+  const heroSub  = p ? p.name.split(' · ').slice(1).join(' · ') : '';
 
   const DECISIONS = [
     { k: 'kept',    label: 'Kept',    color: '#E25C40' },
@@ -61,12 +64,13 @@
 <div class="project-page">
   <Nav
     role="project"
-    projectCtx="Climate · US East Coast"
+    projectCtx={p ? p.name : 'Unknown project'}
     {onNavigate}
     variant={navVariant}
-    onTab={(t) => { if (t === 'Settings') showSettings = true; }}
+    onTab={(t) => { if (t === 'Settings' && p) showSettings = true; }}
   />
 
+  {#if p}
   <!-- ── HERO ── -->
   <div class="hero">
     <div class="breadcrumb">
@@ -75,7 +79,7 @@
     <div class="hero-body">
       <div class="hero-left">
         <h1 class="hero-h1">
-          Climate Reporting <span class="mute">· US East Coast</span>
+          {heroMain}{#if heroSub} <span class="mute">· {heroSub}</span>{/if}
         </h1>
         <div class="chips-row">
           <span class="chip chip-neutral">{p.queues.length} reviewer queues</span>
@@ -242,7 +246,7 @@
               {/if}
             </button>
             <div class="queue-footer-spacer"></div>
-            <button class="btn btn-primary btn-sm" on:click={() => onNavigate(`/demo/review-projects/proj_8fa221/queues/${q.guid}`)}>
+            <button class="btn btn-primary btn-sm" on:click={() => onNavigate(`/demo/review-projects/${projectGuid}/queues/${q.guid}`)}>
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M9 7h8v8"/></svg>
               Open landing
             </button>
@@ -251,6 +255,13 @@
       {/each}
     </div>
   </div>
+  {:else}
+  <div class="not-seeded">
+    <div class="not-seeded-title">Demo data not seeded</div>
+    <p class="not-seeded-body">This project exists in the demo but hasn't been set up with detailed mock data yet. Go back and open one of the seeded projects.</p>
+    <button class="btn" on:click={() => onNavigate('/demo/manage')}>← Back to projects</button>
+  </div>
+  {/if}
 </div>
 
 <!-- ── SETTINGS MODAL ── -->
@@ -258,7 +269,7 @@
   <div class="toast">{csvToast}</div>
 {/if}
 
-{#if showSettings}
+{#if showSettings && p}
   <div class="modal-overlay" on:click={() => showSettings = false} role="dialog" aria-modal="true">
     <div class="modal" on:click|stopPropagation>
       <div class="modal-header">
@@ -278,7 +289,7 @@
             <div class="setting-desc">Display name used across admin and reviewer views.</div>
           </div>
           <div class="setting-control">
-            <input class="setting-input" type="text" value="Climate Reporting · US East Coast" />
+            <input class="setting-input" type="text" value={p ? p.name : ''} />
           </div>
         </div>
         <div class="setting-row">
@@ -686,5 +697,28 @@
   @keyframes fadeIn {
     from { opacity: 0; transform: translateX(-50%) translateY(8px); }
     to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+  }
+
+  /* ── Not seeded fallback ── */
+  .not-seeded {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 80px 40px;
+    gap: 12px;
+  }
+  .not-seeded-title {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--v2-ink);
+  }
+  .not-seeded-body {
+    font-size: 15px;
+    color: var(--v2-mute);
+    max-width: 420px;
+    line-height: 1.6;
+    margin: 0;
   }
 </style>
