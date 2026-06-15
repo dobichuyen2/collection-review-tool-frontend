@@ -178,13 +178,6 @@
         <!-- Options row -->
         <div class="qrc-options">
           <div class="qrc-option-box">
-            <div class="qrc-option-label">Guideline template</div>
-            <div class="qrc-option-val">
-              <span>None selected</span>
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
-            </div>
-          </div>
-          <div class="qrc-option-box">
             <div class="qrc-option-label">Metadata editing</div>
             <button class="qrc-option-val-row" on:click={() => metadataEditing = !metadataEditing}>
               <span class="qrc-option-val">{metadataEditing ? 'On' : 'Off'}</span>
@@ -575,7 +568,7 @@
   .qrc-confirm-num { font-size: 14px; font-weight: 600; font-family: var(--v2-mono); letter-spacing: -0.5px; color: var(--v2-ink); }
   .qrc-confirm-unit { font-size: 12.5px; color: var(--v2-mute); text-transform: uppercase; letter-spacing: .5px; font-weight: 500; }
 
-  .qrc-options { padding: 12px 22px 4px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .qrc-options { padding: 12px 22px 4px; }
   .qrc-option-box { padding: 10px 12px; border: 1px solid var(--v2-line); border-radius: 12px; background: #fff; }
   .qrc-option-label { font-size: 14px; color: var(--v2-mute); letter-spacing: .5px; text-transform: uppercase; font-weight: 500; }
   .qrc-option-val {
