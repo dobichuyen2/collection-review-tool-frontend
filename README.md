@@ -92,6 +92,30 @@ The frontend will run on `http://localhost:5173` and proxy API requests to the b
    - Manager interface (create/open review projects): `http://localhost:5173/manage`
    - Root landing page (static): `http://localhost:5173/`
 
+### Demo build (V2 redesign preview)
+
+The V2 redesign lives behind `/demo`. It runs entirely on mock data — no API key or running
+backend required.
+
+```bash
+cd frontend
+npm install
+npm run dev
+# open http://localhost:5173/demo
+```
+
+The demo route is **on by default**. To disable it (e.g. in a production build), set:
+
+```
+VITE_DEMO_MODE=false
+```
+
+in `frontend/.env` or your deployment environment. With that flag set the app behaves
+exactly as before — the `/demo` route is not registered.
+
+See `BACKEND-GAPS.md` for a full accounting of what would need to be wired up before the
+V2 UI can talk to the real backend.
+
 ### Production Build (Local)
 
 1. **Build the frontend**:

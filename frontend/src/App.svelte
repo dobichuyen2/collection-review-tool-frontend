@@ -33,7 +33,7 @@ import ReviewProjectQueueLanding from './routes/ReviewProjectQueueLanding.svelte
 <main>
   {#if currentPath === '/'}
     <RootStatic />
-  {:else if currentPath.startsWith('/demo')}
+  {:else if currentPath.startsWith('/demo') && import.meta.env.VITE_DEMO_MODE !== 'false'}
     <DemoShell />
   {:else if currentPath === '/manage' || currentPath === '/manage/'}
     <Home />
