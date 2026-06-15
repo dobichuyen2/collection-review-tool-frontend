@@ -119,7 +119,7 @@
                 on:input={onQrType}
               />
               {#if qrShowAuto}
-                <span class="qrc-caret"></span>
+                <span class="qrc-caret" style:left="calc({qrDisplay.length}ch + 2px)"></span>
               {/if}
             </div>
 
@@ -500,7 +500,6 @@
   }
   .qrc-caret {
     position: absolute;
-    right: 0;
     top: 0.18em;
     width: 2px;
     height: 1.2em;

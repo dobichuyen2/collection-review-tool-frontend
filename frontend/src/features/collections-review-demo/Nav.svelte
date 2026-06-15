@@ -3,6 +3,7 @@
   export let projectCtx = null;
   export let onNavigate = () => {};
   export let variant = 'glass';
+  export let onTab = () => {};
 
   const TABS = {
     admin:   [{ n: 'General Admin', to: 'manage', active: true }, { n: 'All Projects' }],
@@ -35,7 +36,7 @@
         <button
           class="nav-tab"
           class:active={t.active}
-          on:click={() => t.to ? onNavigate(t.to) : undefined}
+          on:click={() => t.to ? onNavigate(t.to) : onTab(t.n)}
         >{t.n}</button>
       {/each}
     </nav>
