@@ -803,20 +803,20 @@
 
   .btn-full { width: 100%; justify-content: center; border-radius: 12px; padding: 13px 22px; font-size: 15px; margin-top: 4px; }
 
-  .modal-list { padding-bottom: 8px; }
+  .modal-list { padding: 0 6px 8px; }
   .modal-row {
-    display: flex; align-items: center; gap: 12px;
-    padding: 13px 24px; border-top: 1px solid var(--v2-line-soft, #f0f0f0);
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 13px 18px; border-top: 1px solid var(--v2-line-soft, #f0f0f0);
     cursor: pointer; background: transparent;
     border-left: none; border-right: none; border-bottom: none;
     width: 100%; text-align: left; font-family: var(--v2-sans); color: var(--v2-ink);
-    transition: background .12s;
+    transition: background .12s; border-radius: 8px; box-sizing: border-box;
   }
   .modal-row:is(div) { cursor: default; }
   .modal-row.first { border-top: none; }
   .modal-row:is(button):hover { background: #f8f8f8; }
   .modal-row .review-info { flex: 1; min-width: 0; }
-  .modal-row-right { display: flex; align-items: center; flex-shrink: 0; }
+  .modal-row-right { display: flex; align-items: center; flex-shrink: 0; padding-left: 8px; }
   .modal-progress { flex-shrink: 0; width: 140px; }
   .pct-badge { font-size: 13.5px; font-family: var(--v2-mono); color: var(--v2-mute); }
 </style>
