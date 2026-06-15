@@ -2,7 +2,14 @@
   import { onMount } from 'svelte';
   import Home from './routes/Home.svelte';
   import DemoShell from './features/collections-review-demo/DemoShell.svelte';
+  import DemoIndex from './features/collections-review-demo/DemoIndex.svelte';
+  import DemoHome from './features/collections-review-demo/DemoHome.svelte';
+  import DemoProject from './features/collections-review-demo/DemoProject.svelte';
+  import DemoQueueLanding from './features/collections-review-demo/DemoQueueLanding.svelte';
+  import DemoReview from './features/collections-review-demo/DemoReview.svelte';
   import RootStatic from './routes/RootStatic.svelte';
+
+  const DEMO_ON = import.meta.env.VITE_DEMO_MODE !== 'false';
   import Review from './routes/Review.svelte';
   import ReviewProject from './routes/ReviewProject.svelte';
 import ReviewSkippedQueue from './routes/ReviewSkippedQueue.svelte';
@@ -33,8 +40,16 @@ import ReviewProjectQueueLanding from './routes/ReviewProjectQueueLanding.svelte
 <main>
   {#if currentPath === '/'}
     <RootStatic />
-  {:else if currentPath.startsWith('/demo') && import.meta.env.VITE_DEMO_MODE !== 'false'}
-    <DemoShell />
+  {:else if currentPath === '/demo' && DEMO_ON}
+    <DemoShell><DemoIndex onNavigate={navigate} /></DemoShell>
+  {:else if currentPath === '/demo/manage' && DEMO_ON}
+    <DemoShell><DemoHome onNavigate={navigate} navVariant="glass" /></DemoShell>
+  {:else if currentPath.match(/^\/demo\/review-projects\/[^/]+$/) && DEMO_ON}
+    <DemoShell><DemoProject onNavigate={navigate} navVariant="glass" /></DemoShell>
+  {:else if currentPath.match(/^\/demo\/review-projects\/[^/]+\/queues\/[^/]+$/) && DEMO_ON}
+    <DemoShell><DemoQueueLanding onNavigate={navigate} navVariant="glass" /></DemoShell>
+  {:else if currentPath.match(/^\/demo\/reviews\/[^/]+$/) && DEMO_ON}
+    <DemoShell><DemoReview onNavigate={navigate} navVariant="glass" /></DemoShell>
   {:else if currentPath === '/manage' || currentPath === '/manage/'}
     <Home />
   {:else if currentPath.match(/^\/review-projects\/[0-9a-fA-F-]+\/skipped$/)}

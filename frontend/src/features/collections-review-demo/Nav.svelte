@@ -6,9 +6,9 @@
   export let onTab = () => {};
 
   const TABS = {
-    admin:   [{ n: 'General Admin', to: 'manage', active: true }, { n: 'All Projects' }],
-    project: [{ n: 'Project Admin', to: 'project', active: true }, { n: 'Settings' }, { n: 'All Decisions' }],
-    queue:   [{ n: 'My queue', to: 'review', active: true }, { n: 'Decisions' }],
+    admin:   [{ n: 'General Admin', to: '/demo/manage', active: true }, { n: 'All Projects' }],
+    project: [{ n: 'Project Admin', to: '/demo/review-projects/proj_8fa221', active: true }, { n: 'Settings' }, { n: 'All Decisions' }],
+    queue:   [{ n: 'My queue', to: '/demo/reviews/124', active: true }, { n: 'Decisions' }],
   };
 
   $: tabs = TABS[role] || TABS.admin;
@@ -20,7 +20,7 @@
   <div class="nav-bar" class:glass={!isGrey} class:grey={isGrey}>
     <button
       class="nav-logo"
-      on:click={() => onNavigate(role === 'queue' ? 'review' : 'manage')}
+      on:click={() => onNavigate(role === 'queue' ? '/demo/review-projects/proj_8fa221/queues/q1' : '/demo/manage')}
     >
       <svg width="23" height="23" viewBox="0 0 32 32" fill="none">
         <rect x="4" y="6" width="24" height="20" rx="2.5" stroke="currentColor" stroke-width="2.4"/>

@@ -43,7 +43,7 @@
   <!-- ── HERO ── -->
   <div class="hero">
     <div class="breadcrumb">
-      <button class="breadcrumb-link" on:click={() => onNavigate('manage')}>Projects</button>
+      <button class="breadcrumb-link" on:click={() => onNavigate('/demo/manage')}>Projects</button>
     </div>
     <div class="hero-body">
       <div class="hero-left">
@@ -206,7 +206,7 @@
               Copy reviewer link
             </button>
             <div class="queue-footer-spacer"></div>
-            <button class="btn btn-primary btn-sm" on:click={() => onNavigate('landing')}>
+            <button class="btn btn-primary btn-sm" on:click={() => onNavigate('/demo/review-projects/proj_8fa221/queues/q1')}>
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M9 7h8v8"/></svg>
               Open landing
             </button>

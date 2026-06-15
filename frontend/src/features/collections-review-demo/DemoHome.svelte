@@ -80,7 +80,7 @@
           Curate Media Cloud's news-source collections: keep what holds up, remove the noise, publish back when you're done.
         </p>
         <div class="hero-actions">
-          <button class="btn btn-primary btn-lg" on:click={() => onNavigate('project')}>
+          <button class="btn btn-primary btn-lg" on:click={() => onNavigate('/demo/review-projects/proj_8fa221')}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
             Start a review
           </button>
@@ -181,7 +181,7 @@
           <button
             class="btn btn-primary"
             class:btn-dim={!qrResolved}
-            on:click={() => qrResolved && onNavigate('project')}
+            on:click={() => qrResolved && onNavigate('/demo/review-projects/proj_8fa221')}
           >
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
             Start review
@@ -207,7 +207,7 @@
         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M9 7h8v8"/></svg>
         See all
       </button>
-      <button class="btn" on:click={() => onNavigate('project')}>
+      <button class="btn" on:click={() => onNavigate('/demo/review-projects/proj_8fa221')}>
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
         New project
       </button>
@@ -228,7 +228,7 @@
       {#each MOCK.allProjects.slice(0, 10) as r}
         <button
           class="projects-row"
-          on:click={() => onNavigate('project')}
+          on:click={() => onNavigate('/demo/review-projects/proj_8fa221')}
         >
           <div class="project-avatar">{r.n[0]}</div>
           <div class="project-meta">
@@ -273,7 +273,7 @@
         <button
           class="review-row"
           class:first={i === 0}
-          on:click={() => onNavigate('review')}
+          on:click={() => onNavigate('/demo/reviews/124')}
         >
           <div class="review-info">
             <div class="review-name">{r.n}</div>
@@ -286,7 +286,7 @@
             <span class="progress-pct">{Math.round(r.p * 100)}%</span>
           </div>
           <div class="review-action">
-            <button class="btn btn-sm" on:click|stopPropagation={() => onNavigate('review')}>
+            <button class="btn btn-sm" on:click|stopPropagation={() => onNavigate('/demo/reviews/124')}>
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
               Resume
             </button>

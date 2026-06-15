@@ -94,11 +94,11 @@
       </div>
 
       <div class="card-footer">
-        <button class="btn btn-primary btn-lg" on:click={() => onNavigate('review')}>
+        <button class="btn btn-primary btn-lg" on:click={() => onNavigate('/demo/reviews/124')}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
           Open my queue
         </button>
-        <button class="btn btn-lg" on:click={() => onNavigate('review')}>
+        <button class="btn btn-lg" on:click={() => onNavigate('/demo/reviews/124')}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2 8l10 5 10-5z"/><path d="m2 14 10 5 10-5M2 11l10 5 10-5"/></svg>
           Review all decisions
         </button>
