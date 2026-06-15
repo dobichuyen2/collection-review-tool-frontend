@@ -1,6 +1,8 @@
 <script>
   import DemoHome from './DemoHome.svelte';
   import DemoProject from './DemoProject.svelte';
+  import DemoQueueLanding from './DemoQueueLanding.svelte';
+  import DemoReview from './DemoReview.svelte';
 
   let screen = 'manage';
 
@@ -31,11 +33,9 @@
   {:else if screen === 'project'}
     <DemoProject onNavigate={navigate} navVariant="glass" />
   {:else if screen === 'landing'}
-    <!-- DemoQueueLanding coming in next commit -->
-    <div class="placeholder">Queue Landing screen — coming next</div>
+    <DemoQueueLanding onNavigate={navigate} navVariant="glass" />
   {:else if screen === 'review'}
-    <!-- DemoReview coming in next commit -->
-    <div class="placeholder">Review screen — coming next</div>
+    <DemoReview onNavigate={navigate} navVariant="glass" />
   {/if}
 
   <!-- Floating demo-navigation pill -->
