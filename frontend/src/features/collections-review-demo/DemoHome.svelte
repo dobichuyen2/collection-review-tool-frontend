@@ -64,19 +64,32 @@
   /* ── New project modal ── */
   let showNewProject = false;
   let newProjectName = '';
-  let newProjectSeeds = [];
-  const SEED_OPTIONS = [
-    'US Top Online (2024)', 'Maryland Local', 'Delaware Local', 'Virginia Local',
-    'DC Metro', 'Brazil Top Online (2025)', 'EU Public Broadcasters',
-    'LATAM Spanish-language', 'Africa Radio (2025)', 'AI Content Sweep List',
+  let newGuidelineTemplate = 'default';
+  let newCollectionSource = 'manual'; // 'manual' | 'geographic'
+  let newCollectionIds = '';
+  let newCountry = '';
+
+  const GUIDELINE_TEMPLATES = [
+    { value: 'default',   label: 'Default (keep reliable local reporting)' },
+    { value: 'climate',   label: 'Climate journalism' },
+    { value: 'local',     label: 'Local news' },
+    { value: 'ai-sweep',  label: 'AI content review' },
   ];
+  const COUNTRIES = ['United States', 'Brazil', 'United Kingdom', 'Germany', 'France', 'India', 'Mexico', 'Nigeria', 'Kenya', 'South Africa'];
 
   function submitNewProject() {
     if (!newProjectName.trim()) return;
-    addProject(newProjectName.trim(), newProjectSeeds);
+    const seeds = newCollectionSource === 'manual'
+      ? newCollectionIds.split(',').map(s => s.trim()).filter(Boolean)
+      : newCountry ? [newCountry] : [];
+    addProject(newProjectName.trim(), seeds);
     showNewProject = false;
     newProjectName = '';
-    newProjectSeeds = [];
+    newCollectionIds = '';
+    newCountry = '';
+    newCollectionSource = 'manual';
+    newGuidelineTemplate = 'default';
+    onNavigate('/demo/review-projects/proj_8fa221');
   }
 
   /* ── See-all modals ── */
@@ -340,37 +353,83 @@
 <HelpModal show={showHelp} role="admin" on:close={() => showHelp = false} />
 
 <!-- New project -->
-<Modal show={showNewProject} title="New review project" on:close={() => showNewProject = false}>
+<Modal show={showNewProject} title="Start review project" on:close={() => showNewProject = false}>
+  <p class="modal-subtitle">Seed a multi-collection project into reviewer queues.</p>
   <form class="modal-form" on:submit|preventDefault={submitNewProject}>
+
     <div class="form-field">
-      <label class="form-label" for="proj-name">Project name</label>
+      <label class="form-label" for="proj-guideline">Annotation Guidelines Template</label>
+      <select id="proj-guideline" class="form-select" bind:value={newGuidelineTemplate}>
+        {#each GUIDELINE_TEMPLATES as t}
+          <option value={t.value}>{t.label}</option>
+        {/each}
+      </select>
+    </div>
+
+    <div class="form-field">
+      <label class="form-label" for="proj-name">Project Name</label>
       <input
         id="proj-name"
         class="form-input"
         bind:value={newProjectName}
-        placeholder="e.g. Climate Reporting · EU"
+        placeholder="e.g. UNDP 2026 Seed Project"
         required
         autocomplete="off"
       />
     </div>
+
     <div class="form-field">
-      <div class="form-label">Seed collections <span class="form-label-hint">(optional)</span></div>
-      <div class="seeds-grid">
-        {#each SEED_OPTIONS as seed}
-          <label class="seed-check">
-            <input type="checkbox" bind:group={newProjectSeeds} value={seed} />
-            {seed}
-          </label>
-        {/each}
+      <div class="form-label">Collection source</div>
+      <div class="radio-group">
+        <label class="radio-option" class:radio-selected={newCollectionSource === 'manual'}>
+          <input type="radio" bind:group={newCollectionSource} value="manual" />
+          <div class="radio-text">
+            <span class="radio-label">Manual collection IDs</span>
+            <span class="radio-hint">Enter Media Cloud collection IDs directly</span>
+          </div>
+        </label>
+        <label class="radio-option" class:radio-selected={newCollectionSource === 'geographic'}>
+          <input type="radio" bind:group={newCollectionSource} value="geographic" />
+          <div class="radio-text">
+            <span class="radio-label">Geographic (MediaCloud country list)</span>
+            <span class="radio-hint">Select a country to seed from its top-online list</span>
+          </div>
+        </label>
       </div>
     </div>
-    <div class="modal-footer">
-      <button class="btn btn-ghost" type="button" on:click={() => showNewProject = false}>Cancel</button>
-      <button class="btn btn-primary" type="submit" disabled={!newProjectName.trim()}>
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
-        Create project
-      </button>
-    </div>
+
+    {#if newCollectionSource === 'manual'}
+      <div class="form-field">
+        <label class="form-label" for="proj-ids">MediaCloud Collection IDs</label>
+        <input
+          id="proj-ids"
+          class="form-input"
+          bind:value={newCollectionIds}
+          placeholder="e.g. 123, 456, 789"
+          autocomplete="off"
+        />
+        <div class="form-hint">Separate multiple IDs with commas.</div>
+      </div>
+    {:else}
+      <div class="form-field">
+        <label class="form-label" for="proj-country">Country</label>
+        <select id="proj-country" class="form-select" bind:value={newCountry}>
+          <option value="">Select a country…</option>
+          {#each COUNTRIES as c}
+            <option value={c}>{c}</option>
+          {/each}
+        </select>
+      </div>
+    {/if}
+
+    <button
+      class="btn btn-primary btn-full"
+      type="submit"
+      disabled={!newProjectName.trim()}
+    >
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+      Start review project
+    </button>
   </form>
 </Modal>
 
@@ -702,35 +761,47 @@
   .completed-row.first { border-top: none; }
 
   /* ── Modal content ── */
-  .modal-form { padding: 22px 24px 0; font-family: var(--v2-sans); }
-  .form-field { margin-bottom: 20px; }
-  .form-label { display: block; font-size: 13px; color: var(--v2-mute); text-transform: uppercase; letter-spacing: .5px; font-weight: 500; margin-bottom: 8px; }
-  .form-label-hint { text-transform: none; letter-spacing: 0; font-weight: 400; }
-  .form-input {
+  .modal-subtitle {
+    padding: 0 24px 4px;
+    font-size: 14px; color: var(--v2-mute); font-family: var(--v2-sans);
+    margin: 0;
+  }
+  .modal-form { padding: 16px 24px 24px; font-family: var(--v2-sans); }
+  .form-field { margin-bottom: 18px; }
+  .form-label { display: block; font-size: 12px; color: var(--v2-mute); text-transform: uppercase; letter-spacing: .6px; font-weight: 600; margin-bottom: 7px; }
+  .form-input, .form-select {
     width: 100%; padding: 10px 14px; border-radius: 10px;
     border: 1.5px solid var(--v2-line, #e8e9eb); background: #fff;
-    font-family: var(--v2-sans); font-size: 15px; color: var(--v2-ink);
+    font-family: var(--v2-sans); font-size: 14.5px; color: var(--v2-ink);
     outline: none; box-sizing: border-box;
     transition: border-color .2s;
+    appearance: none; -webkit-appearance: none;
   }
-  .form-input:focus { border-color: var(--v2-accent); }
+  .form-select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239CA0A8' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 36px;
+    cursor: pointer;
+  }
+  .form-input:focus, .form-select:focus { border-color: var(--v2-accent); }
+  .form-hint { font-size: 12.5px; color: var(--v2-mute); margin-top: 5px; }
 
-  .seeds-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
-  .seed-check {
-    display: flex; align-items: center; gap: 8px;
-    padding: 8px 10px; border-radius: 8px; border: 1px solid var(--v2-line, #e8e9eb);
-    font-size: 13.5px; color: var(--v2-body); cursor: pointer;
-    transition: background .12s;
+  .radio-group { display: flex; flex-direction: column; gap: 8px; }
+  .radio-option {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 12px 14px; border-radius: 10px;
+    border: 1.5px solid var(--v2-line, #e8e9eb);
+    cursor: pointer; transition: border-color .15s, background .15s;
   }
-  .seed-check:hover { background: var(--v2-line-soft, #f5f5f7); }
-  .seed-check input[type="checkbox"] { accent-color: var(--v2-accent); flex-shrink: 0; }
+  .radio-option input[type="radio"] { accent-color: var(--v2-accent); margin-top: 3px; flex-shrink: 0; }
+  .radio-option:hover { background: var(--v2-line-soft, #f5f5f7); }
+  .radio-selected { border-color: var(--v2-accent); background: var(--v2-accent-soft, #fdf1ee); }
+  .radio-text { display: flex; flex-direction: column; gap: 2px; }
+  .radio-label { font-size: 14px; font-weight: 500; color: var(--v2-ink); }
+  .radio-hint  { font-size: 13px; color: var(--v2-mute); }
 
-  .modal-footer {
-    display: flex; justify-content: flex-end; gap: 8px;
-    padding: 18px 0 24px;
-    border-top: 1px solid var(--v2-line-soft, #efefef);
-    margin-top: 4px;
-  }
+  .btn-full { width: 100%; justify-content: center; border-radius: 12px; padding: 13px 22px; font-size: 15px; margin-top: 4px; }
 
   .modal-list { padding-bottom: 8px; }
   .modal-row {
