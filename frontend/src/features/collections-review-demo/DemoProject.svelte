@@ -242,7 +242,7 @@
               {/if}
             </button>
             <div class="queue-footer-spacer"></div>
-            <button class="btn btn-primary btn-sm" on:click={() => onNavigate('/demo/review-projects/proj_8fa221/queues/q1')}>
+            <button class="btn btn-primary btn-sm" on:click={() => onNavigate(`/demo/review-projects/proj_8fa221/queues/${q.guid}`)}>
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M9 7h8v8"/></svg>
               Open landing
             </button>

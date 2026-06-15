@@ -8,24 +8,46 @@
   export let navVariant = 'glass';
 
   const p = MOCK.project;
-  const q = p.queues[0];
 
-  // Merge base queue stats with live session decisions from the store.
-  $: queueTotals = {
-    reviewed:  $sessionCounts.totalDecided,
-    kept:      $sessionCounts.totalKept,
-    removed:   $sessionCounts.totalRemoved,
-    added:     $sessionCounts.totalAdded,
-    skipped:   $sessionCounts.totalSkipped,
+  // Resolve which queue to show from the URL (last path segment = guid).
+  const queueGuid = window.location.pathname.split('/').pop();
+  const q = p.queues.find(qq => qq.guid === queueGuid) ?? p.queues[0];
+
+  // Only Queue 1 is the live review session; other queues show their own mock stats.
+  const isActiveQueue = q.guid === 'q1';
+
+  // Unified display stats — reactive only when isActiveQueue (q1 follows sessionCounts).
+  $: displayStats = isActiveQueue ? {
+    decided:  $sessionCounts.totalDecided,
+    kept:     $sessionCounts.totalKept,
+    removed:  $sessionCounts.totalRemoved,
+    added:    $sessionCounts.totalAdded,
+    skipped:  $sessionCounts.totalSkipped,
     undecided: $sessionCounts.totalUndecided,
+  } : {
+    decided:  q.done,
+    kept:     q.kept,
+    removed:  q.removed,
+    added:    q.added,
+    skipped:  q.skipped,
+    undecided: q.undecided,
   };
-  $: queuePct = q.total > 0 ? Math.round(($sessionCounts.totalDecided / q.total) * 100) : 0;
+
+  $: queueTotals = {
+    reviewed:  displayStats.decided,
+    kept:      displayStats.kept,
+    removed:   displayStats.removed,
+    added:     displayStats.added,
+    skipped:   displayStats.skipped,
+    undecided: displayStats.undecided,
+  };
+  $: queuePct = q.total > 0 ? Math.round(displayStats.decided / q.total * 100) : 0;
 
   $: DECISIONS = [
-    { k: 'kept',    n: 'Kept',    v: $sessionCounts.totalKept,    color: '#E25C40' },
-    { k: 'removed', n: 'Removed', v: $sessionCounts.totalRemoved, color: '#1A1C1F' },
-    { k: 'added',   n: 'Added',   v: $sessionCounts.totalAdded,   color: '#F5A48A' },
-    { k: 'skipped', n: 'Skipped', v: $sessionCounts.totalSkipped, color: '#9CA0A8' },
+    { k: 'kept',    n: 'Kept',    v: displayStats.kept,    color: '#E25C40' },
+    { k: 'removed', n: 'Removed', v: displayStats.removed, color: '#1A1C1F' },
+    { k: 'added',   n: 'Added',   v: displayStats.added,   color: '#F5A48A' },
+    { k: 'skipped', n: 'Skipped', v: displayStats.skipped, color: '#9CA0A8' },
   ];
 
   let highlight = null;
@@ -61,12 +83,12 @@
     <div class="card">
       <div class="card-header">
         <span class="card-title">Your queue</span>
-        <span class="card-header-right">{$sessionCounts.totalUndecided} left to decide</span>
+        <span class="card-header-right">{displayStats.undecided} left to decide</span>
       </div>
 
       <div class="progress-section">
         <div class="progress-row">
-          <span class="progress-label">Progress · <b class="mono">{$sessionCounts.totalDecided}</b> of {q.total} sources decided</span>
+          <span class="progress-label">Progress · <b class="mono">{displayStats.decided}</b> of {q.total} sources decided</span>
           <span class="progress-pct">{queuePct}%</span>
         </div>
         <div class="bar-wrap">

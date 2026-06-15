@@ -17,10 +17,10 @@ export const MOCK = {
     seed: ["US Top Online (2024)", "Maryland Local", "Delaware Local", "Virginia Local", "DC Metro"],
     totals: { reviewed: 1240, kept: 812, removed: 318, added: 47, skipped: 63, undecided: 760 },
     queues: [
-      { id: "Queue #1", url: "https://reviews.mediacloud.org/review-projects/proj_8fa221/queues/a4b1f937-2c1d-46e2-b8a1-1f9c6e937201", total: 200, kept: 76, removed: 35, added: 3, skipped: 10, undecided: 76, done: 124 },
-      { id: "Queue #2", url: "https://reviews.mediacloud.org/review-projects/proj_8fa221/queues/c8d2a043-9b66-4c4a-8e21-7d05b1227e7c", total: 180, kept: 52, removed: 28, added: 1, skipped: 7,  undecided: 92, done: 88 },
-      { id: "Queue #3", url: "https://reviews.mediacloud.org/review-projects/proj_8fa221/queues/e6f3b119-04a3-4f78-9b29-2a5f8d0aa110", total: 165, kept: 110, removed: 42, added: 5, skipped: 8, undecided: 0, done: 165 },
-      { id: "Queue #4", url: "https://reviews.mediacloud.org/review-projects/proj_8fa221/queues/b7c4f225-32d8-4e91-a5b0-6e1a9cd44508", total: 190, kept: 0,  removed: 0,  added: 0, skipped: 0, undecided: 190, done: 0 },
+      { id: "Queue #1", guid: "q1", url: "https://reviews.mediacloud.org/review-projects/proj_8fa221/queues/a4b1f937-2c1d-46e2-b8a1-1f9c6e937201", total: 200, kept: 76, removed: 35, added: 3, skipped: 10, undecided: 76, done: 124 },
+      { id: "Queue #2", guid: "q2", url: "https://reviews.mediacloud.org/review-projects/proj_8fa221/queues/c8d2a043-9b66-4c4a-8e21-7d05b1227e7c", total: 180, kept: 52, removed: 28, added: 1, skipped: 7,  undecided: 92, done: 88 },
+      { id: "Queue #3", guid: "q3", url: "https://reviews.mediacloud.org/review-projects/proj_8fa221/queues/e6f3b119-04a3-4f78-9b29-2a5f8d0aa110", total: 165, kept: 110, removed: 42, added: 5, skipped: 8, undecided: 0, done: 165 },
+      { id: "Queue #4", guid: "q4", url: "https://reviews.mediacloud.org/review-projects/proj_8fa221/queues/b7c4f225-32d8-4e91-a5b0-6e1a9cd44508", total: 190, kept: 0,  removed: 0,  added: 0, skipped: 0, undecided: 190, done: 0 },
     ],
   },
   allProjects: [
