@@ -276,7 +276,6 @@
             class:dock-active-remove={currentDecision?.verdict === 'removed'}
             on:click={remove}
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
             Remove
             <kbd class="kbd">R</kbd>
           </button>
@@ -285,8 +284,7 @@
             class:dock-active-skip={currentDecision?.verdict === 'skipped'}
             on:click={skip}
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="m6 4 8 8-8 8M14 4v16"/></svg>
-            Skip for now
+            Skip
             <kbd class="kbd">S</kbd>
           </button>
           <button
@@ -294,7 +292,6 @@
             class:dock-active-keep={currentDecision?.verdict === 'kept'}
             on:click={keep}
           >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5 10 17.5l9-11"/></svg>
             Keep
             <kbd class="kbd kbd-light">K · ↵</kbd>
           </button>
