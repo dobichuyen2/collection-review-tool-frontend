@@ -283,32 +283,32 @@
   }
 
   /* ── Hero ── */
-  .hero { padding: 32px 72px 0; }
+  .hero { padding: 32px 96px 0; }
   .hero-eyebrow { font-size: 13.5px; color: var(--v2-mute); font-family: var(--v2-mono); margin-bottom: 10px; }
-  .hero-h1 { font-size: 54px; font-weight: 600; letter-spacing: -1.8px; margin: 0; line-height: 1.04; color: var(--v2-ink); max-width: 900px; }
+  .hero-h1 { font-size: 62px; font-weight: 600; letter-spacing: -1.8px; margin: 0; line-height: 1.04; color: var(--v2-ink); max-width: 900px; }
   .chips-row { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
   .chip { display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px; border-radius: 999px; font-size: 13.5px; font-weight: 500; font-family: var(--v2-sans); }
   .chip-neutral { background: var(--v2-neutral); color: var(--v2-body); }
-  .about-tool { margin: 18px 0 0; max-width: 920px; font-size: 15.5px; line-height: 1.6; color: var(--v2-body); }
+  .about-tool { margin: 18px 0 0; max-width: 920px; font-size: 17px; line-height: 1.6; color: var(--v2-body); }
   .about-label { font-weight: 500; color: var(--v2-ink); }
   .about-kept    { color: var(--v2-kept);    font-weight: 600; }
   .about-removed { color: var(--v2-removed); font-weight: 600; }
   .about-skipped { color: var(--v2-skipped); font-weight: 600; }
 
   /* ── Layout ── */
-  .section-pad    { padding: 36px 72px 0; }
-  .section-pad-sm { padding: 32px 72px 0; }
+  .section-pad    { padding: 36px 96px 0; }
+  .section-pad-sm { padding: 32px 96px 0; }
 
   /* ── Card ── */
   .card { background: var(--v2-card); border: 1px solid var(--v2-line); border-radius: 16px; overflow: hidden; }
   .card-header { padding: 16px 24px; border-bottom: 1px solid var(--v2-line-soft); display: flex; align-items: center; justify-content: space-between; }
-  .card-title { font-size: 16px; font-weight: 600; }
-  .card-header-right { font-size: 14px; color: var(--v2-mute); font-family: var(--v2-mono); }
+  .card-title { font-size: 18px; font-weight: 600; }
+  .card-header-right { font-size: 15px; color: var(--v2-mute); font-family: var(--v2-mono); }
 
   /* ── Progress ── */
   .progress-section { padding: 22px 24px; }
   .progress-row { display: flex; align-items: baseline; justify-content: space-between; }
-  .progress-label { font-size: 15px; color: var(--v2-body); }
+  .progress-label { font-size: 16.5px; color: var(--v2-body); }
   .mono { font-family: var(--v2-mono); font-weight: 600; color: var(--v2-ink); }
   .progress-pct { font-size: 15px; color: var(--v2-mute); font-family: var(--v2-mono); }
   .bar-wrap { margin-top: 10px; }
@@ -322,9 +322,9 @@
     cursor: pointer; font-family: var(--v2-sans); text-align: left;
     transition: border-color .2s ease, background .2s ease; width: 100%;
   }
-  .decision-label-row { display: inline-flex; align-items: center; gap: 8px; font-size: 15px; color: var(--v2-body); font-weight: 500; }
+  .decision-label-row { display: inline-flex; align-items: center; gap: 8px; font-size: 16.5px; color: var(--v2-body); font-weight: 500; }
   .decision-swatch { width: 9px; height: 9px; border-radius: 3px; flex-shrink: 0; }
-  .decision-count { font-size: 26px; font-weight: 600; letter-spacing: -0.7px; font-family: var(--v2-mono); margin-top: 4px; color: var(--v2-ink); }
+  .decision-count { font-size: 30px; font-weight: 600; letter-spacing: -0.7px; font-family: var(--v2-mono); margin-top: 4px; color: var(--v2-ink); }
 
   /* ── Card footer ── */
   .card-footer { padding: 14px 24px 18px; border-top: 1px solid var(--v2-line-soft); display: flex; align-items: center; gap: 10px; }
@@ -350,10 +350,10 @@
   .queue-col { display: flex; flex-direction: column; gap: 4px; padding-left: 18px; }
   .queue-col:first-child { padding-left: 0; }
   .queue-col.has-divider { border-left: 1px solid var(--v2-line-soft); }
-  .queue-name { font-size: 14px; color: var(--v2-body); font-weight: 500; }
-  .queue-done { font-size: 22px; font-weight: 600; font-family: var(--v2-mono); letter-spacing: -0.5px; color: var(--v2-ink); }
+  .queue-name { font-size: 15.5px; color: var(--v2-body); font-weight: 500; }
+  .queue-done { font-size: 26px; font-weight: 600; font-family: var(--v2-mono); letter-spacing: -0.5px; color: var(--v2-ink); }
   .queue-total { font-size: 14px; color: var(--v2-mute); font-weight: 400; }
-  .queue-status { font-size: 13.5px; color: var(--v2-mute); }
+  .queue-status { font-size: 15px; color: var(--v2-mute); }
 
   /* ── Bucket modal ── */
   .modal-overlay {

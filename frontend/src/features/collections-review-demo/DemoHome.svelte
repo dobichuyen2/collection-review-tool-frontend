@@ -493,7 +493,7 @@
   }
 
   /* ── Hero ── */
-  .hero { padding: 48px 72px 18px; }
+  .hero { padding: 48px 96px 18px; }
   .hero-grid {
     display: grid;
     grid-template-columns: 1.05fr 1fr;
@@ -502,7 +502,7 @@
   }
   .hero-left { display: flex; flex-direction: column; }
   .hero-h1 {
-    font-size: 60px;
+    font-size: 66px;
     font-weight: 600;
     line-height: 1.02;
     letter-spacing: -2.2px;
@@ -659,24 +659,24 @@
   .chip-dot-skipped { background: var(--v2-skipped); }
 
   /* ── Section divider ── */
-  .section-divider-wrap { padding: 40px 72px 0; }
+  .section-divider-wrap { padding: 40px 96px 0; }
   .section-divider { height: 1px; background: var(--v2-line); }
 
   /* ── Section heading ── */
-  .section-header { padding: 28px 72px 8px; display: flex; align-items: flex-end; justify-content: space-between; }
+  .section-header { padding: 28px 96px 8px; display: flex; align-items: flex-end; justify-content: space-between; }
   .section-header-left { display: flex; align-items: baseline; gap: 14px; }
   .section-num { font-size: 14px; font-family: var(--v2-mono); color: var(--v2-mute); font-weight: 500; }
-  .section-title { margin: 0; font-size: 26px; font-weight: 600; letter-spacing: -0.6px; color: var(--v2-ink); }
+  .section-title { margin: 0; font-size: 29px; font-weight: 600; letter-spacing: -0.6px; color: var(--v2-ink); }
   .section-header-actions { display: flex; gap: 8px; }
 
   /* ── Card wrapper ── */
-  .card-wrap { padding: 14px 72px 0; }
+  .card-wrap { padding: 14px 96px 0; }
   .card { background: var(--v2-card); border: 1px solid var(--v2-line); border-radius: 16px; overflow: hidden; }
 
   /* ── Projects table ── */
   .projects-thead {
     display: grid; grid-template-columns: 42px 1.6fr 1fr 1.1fr 30px;
-    font-size: 14.5px; color: var(--v2-mute); font-weight: 500;
+    font-size: 16px; color: var(--v2-mute); font-weight: 500;
     letter-spacing: .5px; text-transform: uppercase;
     padding: 14px 22px 10px; gap: 14px; align-items: center;
   }
@@ -699,9 +699,9 @@
   }
   .project-avatar.sm { width: 28px; height: 28px; font-size: 13px; flex-shrink: 0; }
   .project-meta { min-width: 0; }
-  .project-name { font-size: 14.5px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .project-seeds { font-size: 14px; color: var(--v2-mute); font-family: var(--v2-mono); margin-top: 1px; }
-  .project-queues { font-size: 14.5px; color: var(--v2-body); }
+  .project-name { font-size: 16px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .project-seeds { font-size: 15px; color: var(--v2-mute); font-family: var(--v2-mono); margin-top: 1px; }
+  .project-queues { font-size: 16px; color: var(--v2-body); }
 
   .project-progress { display: flex; align-items: center; gap: 8px; }
   .progress-track { flex: 1; height: 5px; background: var(--v2-line-soft); border-radius: 999px; overflow: hidden; }
@@ -721,11 +721,11 @@
   .btn:disabled { opacity: .35; cursor: not-allowed; pointer-events: none; }
 
   /* ── Lower section ── */
-  .lower-section { padding: 44px 72px 0; display: flex; flex-direction: column; gap: 44px; }
+  .lower-section { padding: 44px 96px 0; display: flex; flex-direction: column; gap: 44px; }
 
   .card-header { padding: 14px 22px; border-bottom: 1px solid var(--v2-line-soft); display: flex; align-items: center; justify-content: space-between; }
   .card-header-left { display: flex; align-items: baseline; gap: 14px; }
-  .card-title { font-size: 16px; font-weight: 600; color: var(--v2-ink); }
+  .card-title { font-size: 17.5px; font-weight: 600; color: var(--v2-ink); }
 
   .review-row {
     padding: 14px 22px; display: grid; grid-template-columns: 1.6fr 1fr 90px; gap: 14px;
@@ -739,8 +739,8 @@
   .review-row:hover { background: var(--v2-line-soft); }
 
   .review-info { min-width: 0; }
-  .review-name { font-size: 14px; font-weight: 500; }
-  .review-id { font-size: 14px; color: var(--v2-mute); font-family: var(--v2-mono); margin-top: 1px; }
+  .review-name { font-size: 15.5px; font-weight: 500; }
+  .review-id { font-size: 15px; color: var(--v2-mute); font-family: var(--v2-mono); margin-top: 1px; }
   .review-progress { display: flex; align-items: center; gap: 8px; }
   .review-action { text-align: right; }
 

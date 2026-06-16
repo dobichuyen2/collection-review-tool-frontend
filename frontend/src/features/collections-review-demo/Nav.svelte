@@ -76,7 +76,7 @@
 
 <style>
   .nav-wrap {
-    padding: 14px 72px 0;
+    padding: 14px 96px 0;
   }
   .nav-wrap.sticky {
     position: sticky;
