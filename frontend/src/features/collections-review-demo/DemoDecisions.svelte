@@ -177,7 +177,7 @@
               </div>
             </div>
           {:else}
-            <div class="table-row" class:first={i === 0} style:grid-template-columns={cols}>
+            <div class="table-row" class:first={i === 0} class:stripe={i % 2 === 1} style:grid-template-columns={cols}>
               <div class="source-name">{d.source}</div>
               <div class="source-url">{d.homepage}</div>
               {#if !isQueueLevel}<div class="source-queue">{d.queue}</div>{/if}
@@ -245,6 +245,7 @@
   .table-head { display: grid; padding: 12px 22px 8px; font-size: 13px; color: var(--v2-mute); font-weight: 600; letter-spacing: .6px; text-transform: uppercase; gap: 14px; }
   .table-row { display: grid; padding: 13px 22px; border-top: 1px solid var(--v2-line-soft); gap: 14px; align-items: start; }
   .table-row.first { border-top: none; }
+  .stripe { background: #FAFAF9; }
 
   .source-name { font-size: 15.5px; font-weight: 500; color: var(--v2-ink); }
   .source-url { font-size: 14px; color: var(--v2-mute); font-family: var(--v2-mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
