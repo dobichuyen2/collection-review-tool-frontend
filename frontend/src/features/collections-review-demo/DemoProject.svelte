@@ -583,7 +583,7 @@
   .modal-count { font-size: 15px; font-weight: 400; color: var(--v2-mute); font-family: var(--v2-mono); }
   .modal-subtitle { font-size: 13.5px; color: var(--v2-mute); margin-top: 3px; }
   .modal-close { width: 30px; height: 30px; border-radius: 8px; border: 1px solid var(--v2-line); background: #fff; color: var(--v2-body); cursor: pointer; display: grid; place-items: center; flex-shrink: 0; }
-  .modal-body { padding: 8px 24px 20px; }
+  .modal-body { padding: 18px 24px 20px; }
   .modal-footer { padding: 14px 24px; border-top: 1px solid var(--v2-line-soft); background: var(--v2-surface); display: flex; align-items: center; justify-content: flex-end; gap: 10px; }
   .saved-note { margin-right: auto; font-size: 13.5px; font-weight: 500; color: var(--v2-accent-ink); }
 
