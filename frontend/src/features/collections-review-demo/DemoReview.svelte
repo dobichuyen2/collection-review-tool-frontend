@@ -196,24 +196,17 @@
       <div class="card">
         <!-- Source header -->
         <div class="source-header">
-          <div class="chips-row">
-            {#if src.isNew}
-              <span class="chip chip-accent"><span class="chip-dot chip-dot-accent"></span>New source</span>
-            {:else}
-              <span class="chip chip-neutral"><span class="chip-dot chip-dot-mute"></span>Existing source</span>
-            {/if}
-            <span class="chip chip-neutral">{src.mediaType}</span>
-            <!-- Fix 3: show current decision badge when revisiting -->
-            {#if currentDecision}
-              {@const VCOLORS = { kept: '#E25C40', removed: '#1A1C1F', added: '#F5A48A', skipped: '#9CA0A8' }}
-              {@const VLABELS = { kept: 'Kept', removed: 'Removed', added: 'Added', skipped: 'Skipped' }}
+          <h1 class="source-title">{src.title}</h1>
+          {#if currentDecision}
+            {@const VCOLORS = { kept: '#E25C40', removed: '#1A1C1F', added: '#F5A48A', skipped: '#9CA0A8' }}
+            {@const VLABELS = { kept: 'Kept', removed: 'Removed', added: 'Added', skipped: 'Skipped' }}
+            <div class="chips-row">
               <span class="chip chip-decided" style:background="{VCOLORS[currentDecision.verdict]}1a" style:color={VCOLORS[currentDecision.verdict]}>
                 <span class="chip-dot" style:background={VCOLORS[currentDecision.verdict]}></span>
                 {VLABELS[currentDecision.verdict]}
               </span>
-            {/if}
-          </div>
-          <h1 class="source-title">{src.title}</h1>
+            </div>
+          {/if}
           <div class="source-links">
             <span class="source-link-static">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>
@@ -520,17 +513,13 @@
 
   /* ── Source header ── */
   .source-header { padding: 24px 28px 8px; }
-  .chips-row { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+  .chips-row { display: flex; align-items: center; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
   .chip {
     display: inline-flex; align-items: center; gap: 6px;
     padding: 3px 9px; border-radius: 999px; font-size: 13.5px; font-weight: 500;
   }
-  .chip-accent   { background: var(--v2-accent-soft); color: var(--v2-accent-ink); }
-  .chip-neutral  { background: var(--v2-neutral);     color: var(--v2-body);       }
   .chip-decided  { font-weight: 600; }
   .chip-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
-  .chip-dot-accent { background: var(--v2-accent); }
-  .chip-dot-mute   { background: var(--v2-mute); }
 
   .source-title { font-size: 50px; font-weight: 600; letter-spacing: -1.2px; line-height: 1.02; margin: 0; color: var(--v2-ink); }
   .source-links { display: flex; align-items: center; gap: 22px; margin-top: 12px; font-size: 13.5px; flex-wrap: wrap; }
