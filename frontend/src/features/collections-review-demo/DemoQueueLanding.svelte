@@ -47,6 +47,13 @@
   $: projectDone  = projectQueues.reduce((s, qq) => s + qq.decided, 0);
   $: projectTotal = p.queues.reduce((s, qq) => s + qq.total, 0);
   $: projectPct   = projectTotal > 0 ? Math.round(projectDone / projectTotal * 100) : 0;
+  $: projectStats = projectQueues.reduce((s, qq) => ({
+    kept:    s.kept    + (qq.kept    ?? 0),
+    removed: s.removed + (qq.removed ?? 0),
+    added:   s.added   + (qq.added   ?? 0),
+    skipped: s.skipped + (qq.skipped ?? 0),
+  }), { kept: 0, removed: 0, added: 0, skipped: 0 });
+  $: projectUndecided = Math.max(0, projectTotal - projectDone);
 
   const DECISION_TILES = [
     { k: 'kept',    label: 'Kept',    color: '#E25C40' },
@@ -190,21 +197,28 @@
   <div class="section-pad-sm">
     <div class="card">
       <div class="status-header">
-        <span class="card-title">Project status</span>
+        <span class="card-title">Project-wide status</span>
         <span class="card-header-right">
           {projectDone.toLocaleString()} / {projectTotal.toLocaleString()} sources · {projectPct}%
         </span>
       </div>
-      <div class="queues-grid" style:grid-template-columns="repeat({p.queues.length}, 1fr)">
-        {#each projectQueues as qq, i}
-          <div class="queue-col" class:has-divider={i > 0}>
-            <div class="queue-name">{qq.id}</div>
-            <div class="queue-done">
-              {qq.decided}<span class="queue-total"> / {qq.total}</span>
-            </div>
-            <div class="queue-status">{queueStatusLabel(qq)}</div>
+      <div class="project-totals">
+        {#each [
+          { label: 'Total',     value: projectTotal,              color: 'var(--v2-ink)' },
+          { label: 'Kept',      value: projectStats.kept,         color: '#E25C40' },
+          { label: 'Added',     value: projectStats.added,        color: '#F5A48A' },
+          { label: 'Removed',   value: projectStats.removed,      color: '#1A1C1F' },
+          { label: 'Skipped',   value: projectStats.skipped,      color: '#9CA0A8' },
+          { label: 'Undecided', value: projectUndecided,          color: 'var(--v2-mute)' },
+        ] as t, i}
+          <div class="ptotal-col" class:has-divider={i > 0}>
+            <div class="ptotal-label" style:color={t.color}>{t.label}</div>
+            <div class="ptotal-value" style:color={t.color}>{t.value.toLocaleString()}</div>
           </div>
         {/each}
+      </div>
+      <div class="project-bar">
+        <DecisionBar totals={{ kept: projectStats.kept, removed: projectStats.removed, added: projectStats.added, skipped: projectStats.skipped }} height={12} />
       </div>
     </div>
   </div>
@@ -346,14 +360,12 @@
 
   /* ── Project status ── */
   .status-header { padding: 16px 24px; border-bottom: 1px solid var(--v2-line-soft); display: flex; align-items: baseline; justify-content: space-between; gap: 22px; }
-  .queues-grid { padding: 16px 24px; display: grid; gap: 22px; }
-  .queue-col { display: flex; flex-direction: column; gap: 4px; padding-left: 18px; }
-  .queue-col:first-child { padding-left: 0; }
-  .queue-col.has-divider { border-left: 1px solid var(--v2-line-soft); }
-  .queue-name { font-size: 15.5px; color: var(--v2-body); font-weight: 500; }
-  .queue-done { font-size: 26px; font-weight: 600; font-family: var(--v2-mono); letter-spacing: -0.5px; color: var(--v2-ink); }
-  .queue-total { font-size: 14px; color: var(--v2-mute); font-weight: 400; }
-  .queue-status { font-size: 15px; color: var(--v2-mute); }
+  .project-totals { padding: 18px 24px; display: grid; grid-template-columns: repeat(6, 1fr); gap: 0; }
+  .ptotal-col { display: flex; flex-direction: column; gap: 4px; padding: 0 18px 0 0; }
+  .ptotal-col.has-divider { padding-left: 18px; border-left: 1px solid var(--v2-line-soft); }
+  .ptotal-label { font-size: 13px; color: var(--v2-mute); text-transform: uppercase; letter-spacing: .5px; font-weight: 600; }
+  .ptotal-value { font-size: 26px; font-weight: 600; font-family: var(--v2-mono); letter-spacing: -0.5px; }
+  .project-bar { padding: 0 24px 18px; }
 
   /* ── Bucket modal ── */
   .modal-overlay {
