@@ -219,10 +219,6 @@
             {#each p.seed as s}
               <span class="seed-chip">{s}</span>
             {/each}
-            <button class="btn btn-sm">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
-              Add
-            </button>
           </div>
           <p class="seed-hint">These are the Media Cloud collections the project was created from. They were used to pull in the starting set of sources for review.</p>
         </div>
