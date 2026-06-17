@@ -88,6 +88,8 @@
     if (e.key === 'k' || e.key === 'Enter') keep();
     if (e.key === 'r') remove();
     if (e.key === 's') skip();
+    if (e.key === 'ArrowLeft' && $reviewState.sourceIdx > 0) navigateToSource($reviewState.sourceIdx - 1);
+    if (e.key === 'ArrowRight' && $reviewState.sourceIdx < QUEUE_SOURCES.length - 1) navigateToSource($reviewState.sourceIdx + 1);
   }
 
   // ── Propose-new-source modal ──────────────────────────────────────────────
@@ -158,22 +160,14 @@
           Back to queue
         </button>
         <div class="action-divider"></div>
-        <button class="btn btn-sm"
-          disabled={$reviewState.sourceIdx === 0}
-          on:click={() => navigateToSource($reviewState.sourceIdx - 1)}>
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="transform:rotate(180deg)"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-          Prev
-        </button>
-        <button class="btn btn-sm"
-          disabled={$reviewState.sourceIdx >= QUEUE_SOURCES.length - 1}
-          on:click={() => navigateToSource($reviewState.sourceIdx + 1)}>
-          Next
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-        </button>
 
         <div class="progress-pill">
           <span class="progress-current">{$reviewState.sourceIdx + 1}</span>
-          <span class="progress-sep">of {QUEUE_SOURCES.length}</span>
+          <span class="progress-sep">/ {QUEUE_SOURCES.length}</span>
+          <div class="progress-mini-track">
+            <div class="progress-mini-fill" style:width="{Math.round(($reviewState.sourceIdx + 1) / QUEUE_SOURCES.length * 100)}%"></div>
+          </div>
+          <span class="progress-pct-label">{Math.round(($reviewState.sourceIdx + 1) / QUEUE_SOURCES.length * 100)}%</span>
         </div>
 
         <div class="action-spacer"></div>
@@ -196,30 +190,52 @@
       <div class="card">
         <!-- Source header -->
         <div class="source-header">
-          <h1 class="source-title">{src.title}</h1>
-          {#if currentDecision}
-            {@const VCOLORS = { kept: '#E25C40', removed: '#1A1C1F', added: '#F5A48A', skipped: '#9CA0A8' }}
-            {@const VLABELS = { kept: 'Kept', removed: 'Removed', added: 'Added', skipped: 'Skipped' }}
-            <div class="chips-row">
-              <span class="chip chip-decided" style:background="{VCOLORS[currentDecision.verdict]}1a" style:color={VCOLORS[currentDecision.verdict]}>
-                <span class="chip-dot" style:background={VCOLORS[currentDecision.verdict]}></span>
-                {VLABELS[currentDecision.verdict]}
-              </span>
+          <div class="source-header-row">
+            <div class="source-header-left">
+              <h1 class="source-title">{src.title}</h1>
+              {#if currentDecision}
+                {@const VCOLORS = { kept: '#E25C40', removed: '#1A1C1F', added: '#F5A48A', skipped: '#9CA0A8' }}
+                {@const VLABELS = { kept: 'Kept', removed: 'Removed', added: 'Added', skipped: 'Skipped' }}
+                <div class="chips-row">
+                  <span class="chip chip-decided" style:background="{VCOLORS[currentDecision.verdict]}1a" style:color={VCOLORS[currentDecision.verdict]}>
+                    <span class="chip-dot" style:background={VCOLORS[currentDecision.verdict]}></span>
+                    {VLABELS[currentDecision.verdict]}
+                  </span>
+                </div>
+              {/if}
+              <div class="source-links">
+                <span class="source-link-static">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>
+                  {src.homepage}
+                </span>
+                <a class="source-link" href="https://{src.homepage}" target="_blank" rel="noreferrer">
+                  Review in Media Cloud
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M9 7h8v8"/></svg>
+                </a>
+              </div>
+              {#if currentDecision?.reason}
+                <div class="prev-reason">Previous note: "{currentDecision.reason}"</div>
+              {/if}
             </div>
-          {/if}
-          <div class="source-links">
-            <span class="source-link-static">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>
-              {src.homepage}
-            </span>
-            <a class="source-link" href="https://{src.homepage}" target="_blank" rel="noreferrer">
-              Review in Media Cloud
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M9 7h8v8"/></svg>
-            </a>
+            <div class="source-nav">
+              <button
+                class="nav-circle"
+                disabled={$reviewState.sourceIdx === 0}
+                on:click={() => navigateToSource($reviewState.sourceIdx - 1)}
+                aria-label="Previous source"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+              </button>
+              <button
+                class="nav-circle"
+                disabled={$reviewState.sourceIdx >= QUEUE_SOURCES.length - 1}
+                on:click={() => navigateToSource($reviewState.sourceIdx + 1)}
+                aria-label="Next source"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+              </button>
+            </div>
           </div>
-          {#if currentDecision?.reason}
-            <div class="prev-reason">Previous note: "{currentDecision.reason}"</div>
-          {/if}
         </div>
 
         <!-- Metadata section -->
@@ -475,13 +491,16 @@
   .action-divider { height: 18px; width: 1px; background: var(--v2-line); flex-shrink: 0; }
   .action-spacer  { flex: 1; }
   .progress-pill {
-    display: flex; align-items: center; gap: 10px;
+    display: flex; align-items: center; gap: 8px;
     padding: 5px 12px; background: var(--v2-surface);
     border: 1px solid var(--v2-line); border-radius: 8px;
-    font-size: 13.5px; margin-left: 6px;
+    font-size: 13.5px;
   }
   .progress-current { font-weight: 600; font-family: var(--v2-mono); }
-  .progress-sep     { color: var(--v2-mute); }
+  .progress-sep { color: var(--v2-mute); font-family: var(--v2-mono); }
+  .progress-mini-track { width: 52px; height: 4px; background: var(--v2-line); border-radius: 999px; overflow: hidden; flex-shrink: 0; }
+  .progress-mini-fill  { height: 100%; background: var(--v2-accent); border-radius: 999px; transition: width .2s; }
+  .progress-pct-label  { font-size: 12.5px; color: var(--v2-mute); font-family: var(--v2-mono); min-width: 28px; }
 
   /* ── Main grid ── */
   .main-grid {
@@ -510,6 +529,19 @@
 
   /* ── Source header ── */
   .source-header { padding: 24px 28px 8px; }
+  .source-header-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+  .source-header-left { flex: 1; min-width: 0; }
+  .source-nav { display: flex; gap: 8px; flex-shrink: 0; padding-top: 4px; }
+  .nav-circle {
+    width: 46px; height: 46px; border-radius: 50%;
+    border: 1px solid var(--v2-line); background: var(--v2-card);
+    color: var(--v2-body); cursor: pointer;
+    display: grid; place-items: center;
+    transition: border-color .15s, color .15s, background .15s;
+    flex-shrink: 0;
+  }
+  .nav-circle:hover:not(:disabled) { border-color: var(--v2-accent); color: var(--v2-accent); background: var(--v2-surface); }
+  .nav-circle:disabled { opacity: .35; cursor: not-allowed; }
   .chips-row { display: flex; align-items: center; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
   .chip {
     display: inline-flex; align-items: center; gap: 6px;
