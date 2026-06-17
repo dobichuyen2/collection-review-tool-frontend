@@ -86,7 +86,7 @@
 
   .nav-bar {
     border-radius: 999px;
-    padding: 7px 14px 7px 20px;
+    padding: 9px 16px 9px 22px;
     display: flex;
     align-items: center;
     gap: 22px;
@@ -118,7 +118,7 @@
     display: flex;
     align-items: center;
     gap: 10px;
-    font-size: 15px;
+    font-size: 17px;
     font-weight: 600;
     letter-spacing: -0.2px;
     cursor: pointer;
@@ -156,9 +156,9 @@
   }
 
   .nav-tab {
-    padding: 6px 12px;
+    padding: 7px 14px;
     border-radius: 999px;
-    font-size: 14px;
+    font-size: 15.5px;
     font-weight: 400;
     background: transparent;
     color: var(--v2-nav-mute);
