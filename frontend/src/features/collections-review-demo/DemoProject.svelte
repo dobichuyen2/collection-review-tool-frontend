@@ -590,13 +590,13 @@
   /* ── Settings modal ── */
   .setting-row { padding: 18px 0; border-top: 1px solid var(--v2-line-soft); }
   .setting-row:first-child { border-top: none; }
-  .setting-row-toggle { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; }
-  .setting-info { flex: 1; }
+  .setting-row-toggle { display: flex; align-items: center; justify-content: space-between; gap: 18px; }
+  .setting-info { flex: 1; min-width: 0; }
   .setting-title { font-size: 14.5px; font-weight: 600; color: var(--v2-ink); }
   .setting-desc  { font-size: 13px; color: var(--v2-mute); margin-top: 2px; line-height: 1.5; }
-  .setting-control { margin-top: 10px; }
-  .setting-input { width: 100%; border: 1px solid var(--v2-line); border-radius: 10px; padding: 10px 12px; font-size: 14px; font-family: var(--v2-sans); color: var(--v2-ink); outline: none; }
-  .setting-textarea { width: 100%; border: 1px solid var(--v2-line); border-radius: 10px; padding: 10px 12px; font-size: 13.5px; font-family: var(--v2-mono); color: var(--v2-body); outline: none; resize: vertical; line-height: 1.5; }
+  .setting-control { margin-top: 10px; width: 100%; box-sizing: border-box; }
+  .setting-input { width: 100%; box-sizing: border-box; border: 1px solid var(--v2-line); border-radius: 10px; padding: 10px 12px; font-size: 14px; font-family: var(--v2-sans); color: var(--v2-ink); outline: none; }
+  .setting-textarea { width: 100%; box-sizing: border-box; border: 1px solid var(--v2-line); border-radius: 10px; padding: 10px 12px; font-size: 13.5px; font-family: var(--v2-mono); color: var(--v2-body); outline: none; resize: vertical; line-height: 1.5; }
   .toggle { width: 34px; height: 20px; border-radius: 999px; position: relative; cursor: pointer; flex-shrink: 0; margin-top: 2px; }
   .toggle-off { background: var(--v2-line-soft); }
   .toggle-on  { background: var(--v2-accent); }
