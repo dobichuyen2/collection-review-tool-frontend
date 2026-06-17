@@ -217,9 +217,6 @@
           </div>
         {/each}
       </div>
-      <div class="project-bar">
-        <DecisionBar totals={{ kept: projectStats.kept, removed: projectStats.removed, added: projectStats.added, skipped: projectStats.skipped }} height={12} />
-      </div>
     </div>
   </div>
 </div>
@@ -365,8 +362,6 @@
   .ptotal-col.has-divider { padding-left: 18px; border-left: 1px solid var(--v2-line-soft); }
   .ptotal-label { font-size: 13px; color: var(--v2-mute); text-transform: uppercase; letter-spacing: .5px; font-weight: 600; }
   .ptotal-value { font-size: 26px; font-weight: 600; font-family: var(--v2-mono); letter-spacing: -0.5px; }
-  .project-bar { padding: 0 24px 18px; }
-
   /* ── Bucket modal ── */
   .modal-overlay {
     position: fixed; inset: 0; z-index: 60;
