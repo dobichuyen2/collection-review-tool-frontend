@@ -128,7 +128,7 @@
     <p class="about-tool">
       <span class="about-label">How reviewing works. </span>
       You'll see one source at a time. For each, decide whether to
-      <b class="about-kept"> Keep</b> it, <b class="about-removed">Remove</b> it, or <b class="about-skipped">Skip</b> if you're unsure.<br>
+      <b class="about-kept"> Keep</b> it, <b class="about-removed">Remove</b> it, or <b class="about-skipped">Skip</b> if you're unsure.
       You may also add new sources. No account needed; your progress saves automatically.
     </p>
   </div>
