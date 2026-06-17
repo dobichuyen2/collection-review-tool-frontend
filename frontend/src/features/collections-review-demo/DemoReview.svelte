@@ -465,7 +465,7 @@
   .done-actions { display: flex; gap: 10px; justify-content: center; }
 
   /* ── Action bar ── */
-  .action-bar-wrap { padding: 34px 96px 0; }
+  .action-bar-wrap { padding: 34px 120px 0; }
   .action-bar {
     padding: 10px 14px; display: flex; align-items: center; gap: 10px;
     background: rgba(255,255,255,.84); backdrop-filter: blur(8px);
@@ -485,7 +485,7 @@
 
   /* ── Main grid ── */
   .main-grid {
-    padding: 34px 96px 0; display: grid;
+    padding: 34px 120px 0; display: grid;
     grid-template-columns: 1fr 340px; gap: 28px; align-items: flex-start;
   }
 

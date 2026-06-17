@@ -297,7 +297,7 @@
   }
 
   /* ── Hero ── */
-  .hero { padding: 32px 96px 0; }
+  .hero { padding: 32px 120px 0; }
   .hero-eyebrow { font-size: 13.5px; color: var(--v2-mute); font-family: var(--v2-mono); margin-bottom: 10px; }
   .hero-h1 { font-size: 62px; font-weight: 600; letter-spacing: -1.8px; margin: 0; line-height: 1.04; color: var(--v2-ink); max-width: 900px; }
   .chips-row { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
@@ -310,8 +310,8 @@
   .about-skipped { color: var(--v2-skipped); font-weight: 600; }
 
   /* ── Layout ── */
-  .section-pad    { padding: 36px 96px 0; }
-  .section-pad-sm { padding: 32px 96px 0; }
+  .section-pad    { padding: 36px 120px 0; }
+  .section-pad-sm { padding: 32px 120px 0; }
 
   /* ── Card ── */
   .card { background: var(--v2-card); border: 1px solid var(--v2-line); border-radius: 16px; overflow: hidden; }

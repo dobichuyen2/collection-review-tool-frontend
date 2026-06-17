@@ -493,7 +493,7 @@
   }
 
   /* ── Hero ── */
-  .hero { padding: 48px 96px 18px; }
+  .hero { padding: 48px 120px 18px; }
   .hero-grid {
     display: grid;
     grid-template-columns: 1.05fr 1fr;
@@ -659,18 +659,18 @@
   .chip-dot-skipped { background: var(--v2-skipped); }
 
   /* ── Section divider ── */
-  .section-divider-wrap { padding: 40px 96px 0; }
+  .section-divider-wrap { padding: 40px 120px 0; }
   .section-divider { height: 1px; background: var(--v2-line); }
 
   /* ── Section heading ── */
-  .section-header { padding: 28px 96px 8px; display: flex; align-items: flex-end; justify-content: space-between; }
+  .section-header { padding: 28px 120px 8px; display: flex; align-items: flex-end; justify-content: space-between; }
   .section-header-left { display: flex; align-items: baseline; gap: 14px; }
   .section-num { font-size: 14px; font-family: var(--v2-mono); color: var(--v2-mute); font-weight: 500; }
   .section-title { margin: 0; font-size: 29px; font-weight: 600; letter-spacing: -0.6px; color: var(--v2-ink); }
   .section-header-actions { display: flex; gap: 8px; }
 
   /* ── Card wrapper ── */
-  .card-wrap { padding: 14px 96px 0; }
+  .card-wrap { padding: 14px 120px 0; }
   .card { background: var(--v2-card); border: 1px solid var(--v2-line); border-radius: 16px; overflow: hidden; }
 
   /* ── Projects table ── */
@@ -721,7 +721,7 @@
   .btn:disabled { opacity: .35; cursor: not-allowed; pointer-events: none; }
 
   /* ── Lower section ── */
-  .lower-section { padding: 44px 96px 0; display: flex; flex-direction: column; gap: 44px; }
+  .lower-section { padding: 44px 120px 0; display: flex; flex-direction: column; gap: 44px; }
 
   .card-header { padding: 14px 22px; border-bottom: 1px solid var(--v2-line-soft); display: flex; align-items: center; justify-content: space-between; }
   .card-header-left { display: flex; align-items: baseline; gap: 14px; }

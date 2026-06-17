@@ -439,7 +439,7 @@
   }
 
   /* ── Hero ── */
-  .hero { padding: 32px 96px 0; }
+  .hero { padding: 32px 120px 0; }
   .breadcrumb { font-size: 13.5px; color: var(--v2-mute); font-family: var(--v2-mono); margin-bottom: 10px; }
   .breadcrumb-link {
     background: none; border: none; padding: 0; cursor: pointer;
@@ -485,8 +485,8 @@
 
   /* ── Card ── */
   .card { background: var(--v2-card); border: 1px solid var(--v2-line); border-radius: 16px; overflow: hidden; }
-  .section-pad    { padding: 36px 96px 0; }
-  .section-pad-sm { padding: 32px 96px 0; }
+  .section-pad    { padding: 36px 120px 0; }
+  .section-pad-sm { padding: 32px 120px 0; }
 
   /* ── Stats card ── */
   .stats-header {
@@ -523,7 +523,7 @@
   .seed-hint { font-size: 12px; color: #9A9CA2; margin: 12px 0 0; line-height: 1.5; }
 
   /* ── Queues ── */
-  .queues-section { padding: 40px 96px 0; }
+  .queues-section { padding: 40px 120px 0; }
   .queues-divider { height: 1px; background: var(--v2-line); margin-bottom: 32px; }
   .queues-header { display: flex; align-items: flex-end; justify-content: space-between; padding: 4px 4px 12px; }
   .queues-title { font-size: 22px; font-weight: 600; }
