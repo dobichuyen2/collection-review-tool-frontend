@@ -11,7 +11,7 @@
   import DemoDecisions from './features/collections-review-demo/DemoDecisions.svelte';
   import RootStatic from './routes/RootStatic.svelte';
 
-  const DEMO_ON = import.meta.env.VITE_DEMO_MODE !== 'false';
+  const DEMO_ON = import.meta.env.VITE_DEMO_MODE === 'true';
   import Review from './routes/Review.svelte';
   import ReviewProject from './routes/ReviewProject.svelte';
 import ReviewSkippedQueue from './routes/ReviewSkippedQueue.svelte';

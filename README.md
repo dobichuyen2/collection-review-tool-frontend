@@ -104,14 +104,15 @@ npm run dev
 # open http://localhost:5173/demo
 ```
 
-The demo route is **on by default**. To disable it (e.g. in a production build), set:
+The demo route is **off by default**. To enable it, set:
 
 ```
-VITE_DEMO_MODE=false
+VITE_DEMO_MODE=true
 ```
 
-in `frontend/.env` or your deployment environment. With that flag set the app behaves
-exactly as before — the `/demo` route is not registered.
+in `frontend/.env` or pass it to the dev server (`VITE_DEMO_MODE=true npm run dev`).
+Without that flag, the app behaves exactly as the upstream — the `/demo` routes are
+never registered and are not present in the production build.
 
 See `BACKEND-GAPS.md` for a full accounting of what would need to be wired up before the
 V2 UI can talk to the real backend.
