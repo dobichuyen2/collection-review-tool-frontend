@@ -10,7 +10,7 @@ from mc_deploy.base import CmdArgs, ParserArgs
 from mc_deploy.dokku import DokkuDeploy, DokkuDBMixin
 from mc_deploy.pyproject import PyProjectMixin
 
-class RssFetcherDeploy(PyProjectMixin, DokkuDBMixin, DokkuDeploy):
+class CollectionReviewDeploy(PyProjectMixin, DokkuDBMixin, DokkuDeploy):
     # Much better to increase WEB_CONCURRENCY setting (gunicorn workers)
     # than number of web containers (parallel containers don't cooperate,
     # or report stats properly)!
@@ -37,5 +37,5 @@ class RssFetcherDeploy(PyProjectMixin, DokkuDBMixin, DokkuDeploy):
         if self.is_prod_staging():
             self.settings_load_private_files("management", "env.sh")
 
-d = RssFetcherDeploy()
+d = CollectionReviewDeploy()
 sys.exit(d.run())
