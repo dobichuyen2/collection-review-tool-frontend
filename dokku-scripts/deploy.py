@@ -19,13 +19,15 @@ class CollectionReviewDeploy(PyProjectMixin, DokkuDBMixin, DokkuDeploy):
     # map of plugin name to service name suffix:
     DOKKU_SERVICES = {"postgres": ""}
 
-    INST_BASE = "undp-collections-review"   # app base name
+    # for installation on Digital Ocean droplet undp.mediacloud.org:
+    INST_BASE = "collections"   # app base name
+
     PROJECT_REPO = "collection-review-tool"
     SERVER_HOST = "brown.angwin" # prod db location
 
     # uses SQLAlchemy 2, but doesn't require DB URL fix?
 
-    def airtable_name(self):
+    def airtable_name(self) -> str:
         return "collection-review"
 
     def settings_get_new(self, args: ParserArgs) -> None:
@@ -35,7 +37,7 @@ class CollectionReviewDeploy(PyProjectMixin, DokkuDBMixin, DokkuDeploy):
         super().settings_get_new(args)
 
         if self.is_prod_staging():
-            self.settings_load_private_files("management", "env.sh")
+            self.settings_load_private_files("management", ["env.sh"])
 
 d = CollectionReviewDeploy()
 sys.exit(d.run())

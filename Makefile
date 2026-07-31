@@ -29,6 +29,10 @@ local-deploy: $(BACKEND_VENV_DONE)
 push:	$(PUSH_VENV_DONE)
 	$(PUSH_VENV_PYTHON) dokku-scripts/deploy.py -dn deploy
 
+# for manually building push-venv:
+.PHONY:	push-venv
+push-venv: $(PUSH_VENV_DONE)
+
 $(PUSH_VENV_DONE): $(PUSH_REQ)
 	python -m venv $(PUSH_VENV)
 	$(PUSH_VENV_PYTHON) -m pip install -r $(PUSH_REQ)
