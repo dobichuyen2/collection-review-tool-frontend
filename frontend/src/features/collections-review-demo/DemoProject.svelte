@@ -560,7 +560,7 @@
   .verdict-chip-btn:hover { border-color: var(--c); }
   .verdict-chip-active { border-color: var(--c) !important; background: color-mix(in srgb, var(--c) 10%, white); color: var(--c); font-weight: 600; }
   .bucket-reason-input {
-    width: 100%; border: 1px solid var(--v2-line); border-radius: 8px;
+    width: 100%; box-sizing: border-box; border: 1px solid var(--v2-line); border-radius: 8px;
     padding: 7px 10px; font-size: 13px; font-family: var(--v2-sans);
     color: var(--v2-ink); resize: none; outline: none; margin-bottom: 8px;
   }
