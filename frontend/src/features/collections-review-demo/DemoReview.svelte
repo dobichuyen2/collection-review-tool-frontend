@@ -47,39 +47,47 @@
   }
   $: isConfirmed = (k) => confirmedFields[k] ?? (k !== 'state');
 
-  // ── Reason modal — Remove and Skip require a reason; Keep is immediate ───
-  let reasonModal = null; // { pendingVerdict: 'remove' | 'skip' }
+  // ── Reason modal (Fix 5) ─────────────────────────────────────────────────
+  // Keep and Remove require a reason before committing.
+  let reasonModal = null; // { pendingVerdict: 'keep' | 'remove' }
   let reasonText = '';
-
-  $: reasonVerbLabel = reasonModal?.pendingVerdict === 'remove' ? 'Remove' : 'Skip';
-  $: reasonColor     = reasonModal?.pendingVerdict === 'remove' ? '#1A1C1F' : '#9CA0A8';
-  $: reasonPlaceholder = reasonModal?.pendingVerdict === 'remove'
-    ? 'Why are you removing this source?'
-    : 'Why are you skipping this source?';
+  $: reasonVerbLabel = reasonModal?.pendingVerdict === 'keep' ? 'Keep' : 'Remove';
   $: reasonCanConfirm = reasonText.trim().length > 0;
 
   function openReasonModal(verdict) {
     reasonModal = { pendingVerdict: verdict };
-    reasonText  = currentDecision?.verdict === verdict ? (currentDecision?.reason ?? '') : '';
+    reasonText  = currentDecision?.reason ?? '';
   }
 
-  function cancelReason() { reasonModal = null; reasonText = ''; }
+  function cancelReason() {
+    reasonModal = null;
+    reasonText  = '';
+  }
 
   function confirmReason() {
     if (!reasonCanConfirm) return;
     const reason = reasonText.trim();
     const v = reasonModal.pendingVerdict;
-    // Always use decideSource — it upserts the entry AND advances sourceIdx.
-    decideSource(v, reason);
+    if (currentDecision !== null) {
+      redecideCurrentSource(v, reason);
+    } else {
+      decideSource(v, reason);
+    }
     reasonModal = null;
     reasonText  = '';
   }
 
   // ── Decisions ─────────────────────────────────────────────────────────────
-  // Keep → immediate (no popup). Remove / Skip → reason popup (required).
-  function keep()   { decideSource('keep', null); }
+  // Keep/Remove open reason modal; Skip is immediate.
+  function keep()   { openReasonModal('keep'); }
   function remove() { openReasonModal('remove'); }
-  function skip()   { openReasonModal('skip'); }
+  function skip() {
+    if (currentDecision !== null) {
+      redecideCurrentSource('skip', null);
+    } else {
+      decideSource('skip', null);
+    }
+  }
 
   // Keyboard shortcuts
   function onKey(e) {
@@ -369,33 +377,42 @@
     </div>
   {/if}
 
-  <!-- ── REASON MODAL — Remove / Skip require a reason ────────────────── -->
+  <!-- ── REASON MODAL (Fix 5 — required for Keep / Remove) ──────────────── -->
   {#if reasonModal}
     <div class="modal-overlay" on:click={cancelReason} role="dialog" aria-modal="true">
-      <div class="reason-modal" on:click|stopPropagation>
-        <div class="reason-modal-header">
-          <div class="reason-modal-title" style:color={reasonColor}>{reasonVerbLabel}: <span class="reason-src-name">{src?.title}</span></div>
-          <div class="reason-modal-sub">A reason is required — it will appear in the decisions list and audit CSV.</div>
-          <button class="modal-close" on:click={cancelReason} aria-label="Close">
+      <div class="modal" on:click|stopPropagation>
+        <div class="modal-header">
+          <div>
+            <div class="modal-title" style:color={reasonModal.pendingVerdict === 'keep' ? '#E25C40' : '#1A1C1F'}>
+              {reasonVerbLabel}: {src?.title}
+            </div>
+            <div class="modal-subtitle">Provide a reason before confirming — it will appear in the decisions list and audit CSV.</div>
+          </div>
+          <button class="modal-close" on:click={cancelReason}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
           </button>
         </div>
-        <div class="reason-modal-body">
-          <label class="reason-label" for="reason-input">Reason <span class="required-star">*</span></label>
-          <textarea
-            id="reason-input"
-            class="reason-textarea"
-            bind:value={reasonText}
-            placeholder={reasonPlaceholder}
-            rows="3"
-          ></textarea>
+        <div class="modal-body">
+          <div class="field-group">
+            <label class="field-label" for="reason-input">
+              Reason <span class="required-star">*</span>
+            </label>
+            <textarea
+              id="reason-input"
+              class="reason-textarea"
+              bind:value={reasonText}
+              placeholder="Why are you {reasonModal.pendingVerdict === 'keep' ? 'keeping' : 'removing'} this source?"
+              rows="4"
+              autofocus
+            ></textarea>
+          </div>
         </div>
-        <div class="reason-modal-footer">
-          <button class="btn btn-sm" on:click={cancelReason}>Cancel</button>
+        <div class="modal-footer">
+          <button class="btn" on:click={cancelReason}>Cancel</button>
           <button
-            class="btn btn-sm reason-confirm-btn"
+            class="btn btn-primary"
             class:btn-dim={!reasonCanConfirm}
-            style:--reason-color={reasonColor}
+            style:background={reasonModal.pendingVerdict === 'keep' ? '#E25C40' : '#1A1C1F'}
             on:click={confirmReason}
           >
             Confirm {reasonVerbLabel}
@@ -614,48 +631,15 @@
   .status-val { font-size: 15px; font-weight: 600; letter-spacing: -0.5px; font-family: var(--v2-mono); margin-top: 4px; transition: color .2s; }
   .position-note { font-size: 13px; color: var(--v2-mute); text-align: center; font-family: var(--v2-mono); padding: 0 4px; }
 
-  /* ── Reason modal ── */
-  .reason-modal {
-    background: var(--v2-card); border: 1px solid var(--v2-line); border-radius: 16px;
-    width: 440px; max-width: 96vw; box-shadow: 0 20px 50px -16px rgba(20,23,30,.32);
-    overflow: hidden;
-  }
-  .reason-modal-header {
-    padding: 18px 20px 16px;
-    border-bottom: 1px solid var(--v2-line-soft);
-    position: relative;
-  }
-  .reason-modal-title {
-    font-size: 15px; font-weight: 700; font-family: var(--v2-sans);
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 28px;
-  }
-  .reason-src-name { font-weight: 500; color: var(--v2-ink); }
-  .reason-modal-sub { font-size: 13px; color: var(--v2-mute); margin-top: 3px; line-height: 1.4; }
-  .reason-modal-header .modal-close {
-    position: absolute; top: 14px; right: 16px;
-  }
-  .reason-modal-body { padding: 16px 20px; }
-  .reason-label {
-    display: block; font-size: 13px; font-weight: 600; color: var(--v2-body);
-    text-transform: uppercase; letter-spacing: .5px; margin-bottom: 8px;
-  }
-  .required-star { color: var(--v2-accent); font-weight: 700; }
+  /* ── Reason modal (Fix 5) ── */
   .reason-textarea {
-    width: 100%; min-height: 96px; padding: 10px 12px; border-radius: 10px;
-    border: 1.5px solid var(--v2-line); font-size: 14px; font-family: var(--v2-sans);
-    color: var(--v2-ink); outline: none; resize: none; line-height: 1.5;
-    background: #fff; display: block; box-sizing: border-box;
+    width: 100%; padding: 12px 14px; border-radius: 10px;
+    border: 1.5px solid var(--v2-line); font-size: 15px; font-family: var(--v2-sans);
+    color: var(--v2-ink); outline: none; resize: vertical; line-height: 1.5;
+    background: var(--v2-surface);
   }
-  .reason-textarea:focus { border-color: var(--v2-accent); box-shadow: 0 0 0 3px rgba(226,92,64,.14); }
-  .reason-modal-footer {
-    padding: 12px 20px; border-top: 1px solid var(--v2-line-soft);
-    display: flex; justify-content: flex-end; gap: 8px;
-  }
-  .reason-confirm-btn {
-    background: var(--reason-color, var(--v2-ink)) !important;
-    color: #fff !important; border: none !important;
-    box-shadow: 0 1px 0 rgba(0,0,0,.08), inset 0 1px 0 rgba(255,255,255,.14) !important;
-  }
+  .reason-textarea:focus { border-color: var(--v2-accent); }
+  .required-star { color: var(--v2-accent); font-weight: 700; }
 
   /* ── Modals (shared) ── */
   .modal-overlay {

@@ -22,51 +22,54 @@
 </script>
 
 <div class="index-page">
-  <div class="index-header">
-    <div class="eyebrow">V2 redesign · demo</div>
-    <h1 class="index-h1">Collections Review Portal</h1>
-    <p class="index-sub">
-      Prototype running on mock data — no backend required.
-      Choose a role below to enter the interface.
-    </p>
-  </div>
+  <div class="index-wrap">
+    <div class="index-header">
+      <div class="eyebrow">V2 redesign · demo</div>
+      <h1 class="index-h1">Collections Review Portal</h1>
+      <p class="index-sub">
+        Prototype running on mock data — no backend required.
+        Choose a role below to enter the interface.
+      </p>
+    </div>
 
-  <div class="roles-grid">
-    {#each ROLES as role}
-      <div class="role-block">
-        <div class="role-header">
-          <div class="role-label">{role.label}</div>
-          <p class="role-desc">{role.desc}</p>
+    <div class="roles-grid">
+      {#each ROLES as role}
+        <div class="role-block">
+          <div class="role-header">
+            <div class="role-label">{role.label}</div>
+            <p class="role-desc">{role.desc}</p>
+          </div>
+          <div class="screens-list">
+            {#each role.screens as s}
+              <button class="screen-card" on:click={() => onNavigate(s.path)}>
+                <div class="screen-card-left">
+                  <div class="screen-title">{s.title}</div>
+                  <div class="screen-sub">{s.sub}</div>
+                </div>
+                <svg class="screen-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M5 12h14M13 6l6 6-6 6"/>
+                </svg>
+              </button>
+            {/each}
+          </div>
         </div>
-        <div class="screens-list">
-          {#each role.screens as s}
-            <button class="screen-card" on:click={() => onNavigate(s.path)}>
-              <div class="screen-card-left">
-                <div class="screen-title">{s.title}</div>
-                <div class="screen-sub">{s.sub}</div>
-              </div>
-              <svg class="screen-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M5 12h14M13 6l6 6-6 6"/>
-              </svg>
-            </button>
-          {/each}
-        </div>
-      </div>
-    {/each}
-  </div>
+      {/each}
+    </div>
 
-  <div class="index-footer">
-    <span class="footer-note">
-      All data is mocked. See
-      <code>BACKEND-GAPS.md</code>
-      for what needs backend work before production.
-    </span>
+    <div class="index-footer">
+      <span class="footer-note">
+        All data is mocked. See
+        <code>BACKEND-GAPS.md</code>
+        for what needs backend work before production.
+      </span>
+    </div>
   </div>
 </div>
 
 <style>
   .index-page {
     min-height: 100vh;
+    width: 100%;
     background: var(--v2-bg);
     font-family: var(--v2-sans);
     color: var(--v2-ink);
@@ -74,8 +77,17 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 72px 40px;
-    gap: 0;
+    padding: 80px 40px;
+    box-sizing: border-box;
+  }
+
+  /* Explicit max-width wrapper — reliable centering independent of flex ancestor chain */
+  .index-wrap {
+    width: 100%;
+    max-width: 960px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
   }
 
   .index-header {
@@ -111,7 +123,11 @@
     grid-template-columns: 1fr 1fr;
     gap: 28px;
     width: 100%;
-    max-width: 860px;
+  }
+
+  @media (max-width: 620px) {
+    .index-page { padding: 60px 24px; }
+    .roles-grid { grid-template-columns: 1fr; }
   }
 
   .role-block {
@@ -180,6 +196,7 @@
   .index-footer {
     margin-top: 44px;
     text-align: center;
+    width: 100%;
   }
   .footer-note {
     font-size: 13px;

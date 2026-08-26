@@ -3,6 +3,11 @@
 # create or destroy UNDP Collections Review server as a Dokku app
 # Patterned after mediacloud/web-search dokku-scripts/instance.sh
 
+# Phil: IMO unduly mangled from my web-search and rss-fetcher versions
+# please copy from one of those, or maybe it's time to have a repo
+# with a single/common version of the scripts??  This version doesn't
+# handle arguments that contain quotes, which the above versions do!!
+
 SCRIPT_DIR=$(dirname "$0")
 
 OP=$1

@@ -3,6 +3,17 @@
 # Deploy code by pushing current branch to Dokku app instance
 # Patterned after mediacloud/web-search dokku-scripts/push.sh
 
+# Phil: IMO unduly mangled from my web-search and rss-fetcher versions
+# please copy from one of those, or maybe it's time to have a repo
+# with a single/common version of the scripts??  This version doesn't
+# handle arguments that contain quotes, which the above versions do!!
+#
+# ALSO: This file contains functions (load_management_config
+# derive_airtable_hardware normalize_airtable_hardware) that seem to
+# be called only once.  I consider this an anti-pattern.  If the
+# functions are of general utility they should be located somewhere
+# else!
+
 SCRIPT_DIR=$(dirname "$0")
 ROOT_DIR=$(cd "$SCRIPT_DIR/.." && pwd)
 
@@ -106,7 +117,7 @@ PUSH_FLAGS=
 for ARG in "$@"; do
     case "$ARG" in
     --force-push) PUSH_FLAGS=--force ;; # force push code to dokku repo
-    --unpushed|-u) MCWEB_UNPUSHED=1 ;;  # allow unpushed repo for development
+    --unpushed|-u) MCREVIEW_UNPUSHED=1 ;;  # allow unpushed repo for development
     --help|-h)
         usage
         exit 0
@@ -171,13 +182,13 @@ fi
 # Make sure branch is pushed and in sync with upstream (unless overridden)
 UPSTREAM=$(git rev-parse --abbrev-ref --symbolic-full-name "@{u}" 2>/dev/null)
 if [ -z "$UPSTREAM" ]; then
-    if [ -z "$MCWEB_UNPUSHED" ]; then
+    if [ -z "$MCREVIEW_UNPUSHED" ]; then
         echo "$0: branch $BRANCH has no upstream; push to GitHub first or use --unpushed." 1>&2
         exit 1
     fi
 else
     AHEAD=$(git rev-list --count "${UPSTREAM}..$BRANCH" 2>/dev/null)
-    if [ "${AHEAD:-0}" -gt 0 ] && [ -z "$MCWEB_UNPUSHED" ]; then
+    if [ "${AHEAD:-0}" -gt 0 ] && [ -z "$MCREVIEW_UNPUSHED" ]; then
         echo "$0: branch $BRANCH has unpushed commits; push to upstream or use --unpushed." 1>&2
         exit 1
     fi
@@ -209,7 +220,24 @@ echo "Deploying branch $BRANCH to dokku app $APP (instance=$INSTANCE) on $FQDN"
 
 set -e
 
+DATE_TIME=$(date -u '+%F-%H-%M-%S')
+TAG=${DATE_TIME}-$(hostname)-${INSTANCE}
+
+echo ''
+echo adding local tag $TAG
+git tag $TAG
+
 git push $PUSH_FLAGS "$DOKKU_GIT_REMOTE" "$BRANCH:main"
 
-echo "Deployment to $APP complete."
+echo ''
+echo pushing tag $TAG to "$DOKKU_GIT_REMOTE"
+git push "$DOKKU_GIT_REMOTE" "$TAG"
 
+if [ "x$MCREVIEW_UNPUSHED" != x -a "x$UPSTREAM" != x ]; then
+    echo ''
+    echo pushing $TAG to $UPSTREAM
+    git push $TAG $UPSTREAM
+fi
+
+echo ''
+echo "Deployment to $APP complete."

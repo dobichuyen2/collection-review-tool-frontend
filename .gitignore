@@ -58,3 +58,7 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Deployment
+dokku-scripts/.dokku-ssh-ok.*
+push-venv
