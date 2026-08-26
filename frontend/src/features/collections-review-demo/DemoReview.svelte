@@ -633,7 +633,7 @@
 
   /* ── Reason modal (Fix 5) ── */
   .reason-textarea {
-    width: 100%; padding: 12px 14px; border-radius: 10px;
+    width: 100%; box-sizing: border-box; padding: 12px 14px; border-radius: 10px;
     border: 1.5px solid var(--v2-line); font-size: 15px; font-family: var(--v2-sans);
     color: var(--v2-ink); outline: none; resize: vertical; line-height: 1.5;
     background: var(--v2-surface);
