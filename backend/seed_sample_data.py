@@ -23,12 +23,23 @@ from models import (
 )
 
 
+PROJECT_GUID = '00000000-0000-0000-0000-000000000001'
+
+
 def seed():
     app = create_app()
     with app.app_context():
+        # Idempotency guard: the GUID below is fixed, so a second run would fail
+        # with IntegrityError on review_projects.guid. Exit cleanly instead.
+        existing = ReviewProject.query.filter_by(guid=PROJECT_GUID).first()
+        if existing:
+            print(f'Already seeded: project guid={PROJECT_GUID} (id={existing.id}) — nothing to do.')
+            print('To reseed, delete the database file and run again.')
+            return
+
         # Create a sample project
         proj = ReviewProject(
-            guid='00000000-0000-0000-0000-000000000001',
+            guid=PROJECT_GUID,
             collection_ids_json='[123]',
             collection_names_json='["Sample Collection"]',
             name='Sample Project',
